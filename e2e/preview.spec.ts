@@ -550,6 +550,16 @@ for (const viewport of [
   });
 }
 
+test("reviewer text renders in the self-hosted Figtree face", async ({ page }) => {
+  await page.goto("/");
+  const translation = page.getByRole("textbox", { name: "Translation 1", exact: true });
+  await expect(translation).toHaveCSS("font-family", /^Figtree/u);
+  expect(await page.evaluate(async () => {
+    await document.fonts.ready;
+    return document.fonts.check("14px Figtree");
+  })).toBe(true);
+});
+
 test("preview help drawer disables motion when requested", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
