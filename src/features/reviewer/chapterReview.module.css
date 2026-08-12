@@ -8,6 +8,8 @@
 }
 
 .dialog {
+  --previewAnnouncementHeight: 42px;
+
   position: relative;
   display: flex;
   width: 100%;
@@ -15,13 +17,166 @@
   max-height: 100vh;
   min-height: 100vh;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip;
   outline: none;
   background: var(--bg);
 }
 
 .dialog:focus-visible {
   box-shadow: inset 0 0 0 3px rgba(222, 86, 67, .22);
+}
+
+.previewAnnouncement {
+  position: relative;
+  z-index: 51;
+  display: grid;
+  height: var(--previewAnnouncementHeight);
+  flex: none;
+  grid-template-columns: minmax(28px, 1fr) auto minmax(28px, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: #e9bc42;
+  color: #2b2413;
+  font-family: "Figtree", system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.previewMessage {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.previewHelpButton,
+.previewCloseButton,
+.drawerCloseButton {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  transition: background .12s, color .12s;
+}
+
+.previewHelpButton {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.previewCloseButton {
+  justify-self: end;
+  color: rgba(43, 36, 19, .72);
+}
+
+.previewHelpButton:hover,
+.previewCloseButton:hover {
+  background: rgba(255, 255, 255, .28);
+  color: #141414;
+}
+
+.previewHelpButton:focus-visible,
+.previewCloseButton:focus-visible {
+  box-shadow: 0 0 0 3px rgba(20, 20, 20, .2);
+}
+
+.previewHelpDrawer {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(380px, 100%);
+  overflow-y: auto;
+  padding: 22px;
+  visibility: hidden;
+  background: #1e1e21;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, .24);
+  color: #fff;
+  font-family: "Figtree", system-ui, sans-serif;
+  transform: translateX(100%);
+  transition: top .18s ease, transform .22s ease, visibility 0s linear .22s;
+}
+
+.previewHelpDrawer[data-announcement-visible="true"] {
+  top: var(--previewAnnouncementHeight);
+}
+
+.previewHelpDrawer[data-open="true"] {
+  visibility: visible;
+  transform: translateX(0);
+  transition-delay: 0s;
+}
+
+.previewHelpHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, .18);
+}
+
+.previewHelpHeader h3 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.drawerCloseButton {
+  color: rgba(255, 255, 255, .68);
+}
+
+.drawerCloseButton:hover {
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+}
+
+.drawerCloseButton:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .28);
+}
+
+.previewFeatureList {
+  display: grid;
+  gap: 0;
+}
+
+.previewFeatureList > div {
+  padding: 17px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+
+.previewFeatureList dt {
+  margin-bottom: 5px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.previewFeatureList dd {
+  color: rgba(255, 255, 255, .72);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .previewHelpDrawer {
+    transition: none;
+  }
 }
 
 .header {
@@ -1141,6 +1296,20 @@
 }
 
 @media (max-width: 620px) {
+  .dialog {
+    --previewAnnouncementHeight: 58px;
+  }
+
+  .previewAnnouncement {
+    gap: 7px;
+    padding: 0 9px;
+    font-size: 11px;
+  }
+
+  .previewMessage {
+    gap: 6px;
+  }
+
   .header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

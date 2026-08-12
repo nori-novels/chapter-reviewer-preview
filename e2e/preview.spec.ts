@@ -71,6 +71,73 @@ async function expectViewportContained(page: Page) {
   });
 }
 
+async function expectPreviewAnnouncementHelp(
+  page: Page,
+  viewport: { width: number; height: number },
+) {
+  const announcement = page.getByTestId("reviewer-preview-announcement");
+  const drawer = page.getByTestId("reviewer-help-drawer");
+  const source = page.getByTestId("chapter-source-scroller");
+  const english = page.getByTestId("chapter-english-scroller");
+  const qa = page.getByTestId("qa-sidebar");
+  const growthTarget = viewport.width <= 760 ? source.locator("../..") : source;
+
+  await expect(announcement).toBeVisible();
+  await expect(announcement).toHaveText(
+    /This is a preview\. Click help for details about reviewer features\./u,
+  );
+  await expect(drawer).toHaveAttribute("aria-hidden", "true");
+
+  const widthsBefore = await Promise.all([source, english, qa].map(async (locator) => (
+    (await locator.boundingBox())?.width
+  )));
+  const heightBefore = (await growthTarget.boundingBox())?.height ?? 0;
+  const help = page.getByRole("button", {
+    name: "Reviewer feature help",
+    exact: true,
+  });
+  await help.click();
+
+  const close = page.getByRole("button", { name: "Close reviewer feature help" });
+  await expect(close).toBeFocused();
+  await expect(drawer).not.toHaveAttribute("aria-hidden");
+  await expect(drawer).toHaveCSS("background-color", "rgb(30, 30, 33)");
+  await expect(drawer).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(drawer).toHaveCSS("font-family", /Figtree/u);
+  await expect.poll(() => drawer.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return Math.round(bounds.right);
+  })).toBe(viewport.width);
+  await expect.poll(() => drawer.evaluate((element) => (
+    Math.round(element.getBoundingClientRect().width)
+  ))).toBe(Math.min(380, viewport.width));
+
+  const widthsOpen = await Promise.all([source, english, qa].map(async (locator) => (
+    (await locator.boundingBox())?.width
+  )));
+  expect(widthsOpen).toEqual(widthsBefore);
+  await help.click();
+  await announcement.getByText(
+    "This is a preview. Click help for details about reviewer features.",
+  ).click();
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveAttribute("aria-hidden");
+  await expect(page.getByRole("status")).toHaveAttribute("data-show", "false");
+
+  await page.getByRole("button", { name: "Dismiss preview announcement" }).click();
+  await expect(announcement).toBeHidden();
+  await expect(drawer).toHaveAttribute("data-announcement-visible", "false");
+  await expect.poll(() => drawer.evaluate((element) => (
+    Math.round(element.getBoundingClientRect().top)
+  ))).toBe(0);
+  await expect.poll(async () => (await growthTarget.boundingBox())?.height ?? 0)
+    .toBeGreaterThan(heightBefore);
+
+  await close.click();
+  await expect(page.getByRole("textbox", { name: "English title" })).toBeFocused();
+  await expect(drawer).toHaveAttribute("aria-hidden", "true");
+}
+
 for (const viewport of [
   { name: "desktop", width: 1440, height: 1000 },
   { name: "mobile", width: 390, height: 844 },
@@ -152,6 +219,8 @@ for (const viewport of [
     ]) {
       await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
     }
+
+    await expectPreviewAnnouncementHelp(page, viewport);
 
     for (let index = 0; index < 12; index += 1) {
       await page.keyboard.press("Tab");
@@ -367,9 +436,18 @@ for (const viewport of [
       .toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: "Sync scrolling" }))
       .toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("reviewer-preview-announcement")).toBeVisible();
     await expectViewportContained(page);
 
     expect(trafficViolations).toEqual([]);
     expect(websocketViolations).toEqual([]);
   });
 }
+
+test("preview help drawer disables motion when requested", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Reviewer feature help" }).click();
+  await expect(page.getByTestId("reviewer-help-drawer"))
+    .toHaveCSS("transition-duration", "0s");
+});

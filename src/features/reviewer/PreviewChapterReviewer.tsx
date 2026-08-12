@@ -20,6 +20,7 @@ import { ChapterIndexMenu } from "./ChapterIndexMenu";
 import { ChapterQaSidebar } from "./ChapterQaSidebar";
 import { ChapterReviewMetadata } from "./ChapterReviewMetadata";
 import { FindReplacePanel, type FindReplaceState } from "./FindReplacePanel";
+import { PreviewAnnouncementHelp } from "./PreviewAnnouncementHelp";
 import { PreviewRetryModal } from "./PreviewRetryModal";
 import {
   type ComparisonPreferences,
@@ -52,9 +53,18 @@ function readActiveSelection(): string {
   return value.slice(selectionStart, selectionEnd).replace(/\r\n?|\n/gu, " ").trim();
 }
 
+function isUsableFocusTarget(target: HTMLElement): boolean {
+  return target.isConnected
+    && !target.hidden
+    && !target.matches(":disabled")
+    && target.getAttribute("aria-disabled") !== "true"
+    && !target.closest("[inert], [aria-hidden='true']");
+}
+
 function trapTab(event: KeyboardEvent, container: HTMLElement | null) {
   if (event.key !== "Tab" || !container) return;
-  const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE));
+  const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE))
+    .filter(isUsableFocusTarget);
   const first = focusable[0];
   const last = focusable.at(-1);
   if (!first || !last) {
@@ -83,6 +93,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   const retryOpenerRef = useRef<HTMLElement | null>(null);
   const findInputRef = useRef<HTMLInputElement | null>(null);
   const findOpenRef = useRef(false);
+  const helpDrawerOpenRef = useRef(false);
   const [title, setTitle] = useState(fixture.chapter.translatedTitle ?? "");
   const [body, setBody] = useState(fixture.chapter.translatedBody);
   const [privacyRoot, setPrivacyRoot] = useState<HTMLDivElement | null>(null);
@@ -150,6 +161,11 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
       if (retryOpen) return;
+      if (helpDrawerOpenRef.current && event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (event.metaKey && event.altKey && event.code === "KeyF") {
         event.preventDefault();
         event.stopPropagation();
@@ -255,6 +271,12 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
         inert={retryOpen || undefined}
         tabIndex={-1}
       >
+        <PreviewAnnouncementHelp
+          fallbackFocus={() => focusInsideDialog(titleInputRef.current)}
+          onDrawerOpenChange={(open) => {
+            helpDrawerOpenRef.current = open;
+          }}
+        />
         <header className={styles.header}>
           <div className={styles.headingGroup}>
             <span className={styles.chapterNumber}>Chapter {fixture.chapter.ordinal}</span>

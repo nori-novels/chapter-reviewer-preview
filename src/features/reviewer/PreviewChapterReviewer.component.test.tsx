@@ -22,6 +22,89 @@ function renderReviewer(fixture = previewFixture) {
   );
 }
 
+const REVIEWER_FEATURES = [
+  ["QA rail", "Summarizes warnings, expands for details, and jumps to affected source and translation text."],
+  ["Warning navigation", "Moves among repeated occurrences of the selected issue."],
+  ["Find and replace", "Searches the English draft, navigates matches, and replaces one or all matches."],
+  ["Align paragraphs", "Pairs source and translation paragraphs for direct comparison and editing."],
+  ["Sync scrolling", "Keeps the source and translation panes moving together."],
+  ["Glossary editing", "Opens the relevant glossary entry so terminology can be corrected at its source."],
+  ["Retranslate", "Opens anonymized prompts so the retranslation workflow can be explored locally."],
+] as const;
+
+it("shows the preview announcement for each mounted preview session", async () => {
+  const first = renderReviewer();
+  expect(screen.getByTestId("reviewer-preview-announcement")).toHaveTextContent(
+    "This is a preview. Click help for details about reviewer features.",
+  );
+
+  await userEvent.setup().click(screen.getByRole("button", {
+    name: "Dismiss preview announcement",
+  }));
+  expect(screen.queryByTestId("reviewer-preview-announcement")).toBeNull();
+
+  first.unmount();
+  renderReviewer();
+  expect(screen.getByTestId("reviewer-preview-announcement")).toBeVisible();
+});
+
+it("opens public feature help and closes it only through its own X", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+  const help = screen.getByRole("button", { name: "Reviewer feature help" });
+  const drawer = screen.getByTestId("reviewer-help-drawer");
+  expect(drawer).toHaveAttribute("aria-hidden", "true");
+  expect(drawer).toHaveAttribute("inert");
+
+  await user.click(help);
+  const close = screen.getByRole("button", { name: "Close reviewer feature help" });
+  await waitFor(() => expect(close).toHaveFocus());
+  expect(drawer).not.toHaveAttribute("aria-hidden");
+  for (const [term, description] of REVIEWER_FEATURES) {
+    expect(within(drawer).getByText(term)).toBeVisible();
+    expect(within(drawer).getByText(description)).toBeVisible();
+  }
+
+  await user.click(help);
+  fireEvent.mouseDown(screen.getByTestId("chapter-english-scroller"));
+  await user.keyboard("{Escape}");
+  expect(drawer).not.toHaveAttribute("aria-hidden");
+  expect(screen.getByRole("status")).toHaveAttribute("data-show", "false");
+
+  await user.click(close);
+  await waitFor(() => expect(help).toHaveFocus());
+  expect(drawer).toHaveAttribute("aria-hidden", "true");
+});
+
+it("keeps help open when its announcement is dismissed and restores safe focus", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+  await user.click(screen.getByRole("button", { name: "Reviewer feature help" }));
+  await user.click(screen.getByRole("button", { name: "Dismiss preview announcement" }));
+
+  const drawer = screen.getByRole("complementary", { name: "Chapter reviewer features" });
+  expect(drawer).toHaveAttribute("data-announcement-visible", "false");
+  expect(drawer).not.toHaveAttribute("aria-hidden");
+
+  await user.click(screen.getByRole("button", { name: "Close reviewer feature help" }));
+  await waitFor(() => expect(screen.getByLabelText("English title")).toHaveFocus());
+});
+
+it("keeps hidden help controls out of both reviewer Tab boundaries", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+  await user.click(screen.getByRole("button", { name: "Dismiss preview announcement" }));
+  const first = screen.getByRole("button", { name: "Previous chapter" });
+  const last = screen.getByRole("button", { name: "Approve with override" });
+
+  first.focus();
+  fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+  expect(last).toHaveFocus();
+
+  fireEvent.keyDown(document, { key: "Tab" });
+  expect(first).toHaveFocus();
+});
+
 async function openRetryModal() {
   const user = userEvent.setup();
   const reviewerDialog = screen.getByRole("dialog", { name: /Chapter 25/iu });
