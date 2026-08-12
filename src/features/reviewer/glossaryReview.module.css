@@ -1,0 +1,484 @@
+.overlay {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .56);
+  backdrop-filter: blur(7px);
+}
+
+.dialog {
+  position: relative;
+  display: flex;
+  width: 1560px;
+  max-width: calc(100vw - 48px);
+  min-height: min(820px, calc(100vh - 48px));
+  max-height: calc(100vh - 48px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  outline: none;
+  background: var(--bg);
+  box-shadow: 0 26px 100px rgba(0, 0, 0, .3);
+}
+
+.header,
+.controls,
+.footer,
+.confirmActions {
+  display: flex;
+  align-items: center;
+}
+
+.header {
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 22px;
+}
+
+.eyebrow {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.header p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.iconButton {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  outline: none;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.iconButton:hover:not(:disabled) { background: rgba(0, 0, 0, .08); }
+.iconButton:disabled { opacity: .4; cursor: default; }
+
+.iconButton:focus-visible {
+  outline: 3px solid rgba(222, 86, 67, .18);
+  outline-offset: 1px;
+}
+
+.controls input:focus-visible,
+.selectTrigger:focus-visible,
+.table input:not([type="checkbox"]):focus-visible,
+.table textarea:focus-visible {
+  border-color: var(--text);
+  box-shadow: none;
+  outline: var(--fieldFocusRing);
+  outline-offset: var(--fieldFocusOffset);
+}
+
+.controls {
+  flex: none;
+  gap: 12px;
+  padding: 13px 22px;
+}
+
+.searchField { position: relative; flex: 1 1 auto; }
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  color: var(--muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.controls .searchField input { padding-left: 31px; }
+
+.controls input,
+.table input,
+.table textarea {
+  width: 100%;
+  border: 1px solid var(--field);
+  border-radius: 7px;
+  outline: none;
+  padding: 8px 9px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+/* In-table fields carry a resting tint instead of a border; disabled rows go
+   flat so the whole row reads as one muted surface. */
+.table input,
+.table textarea,
+.table .selectTrigger {
+  border-color: transparent;
+  background: rgba(0, 0, 0, .05);
+}
+
+.disabledRow input,
+.disabledRow textarea,
+.disabledRow .selectTrigger {
+  background: transparent;
+}
+
+/* Table rows are dense enough that the default offset collides with the
+   neighbouring cell, and the resting tint stays put on focus. The input
+   selector here must repeat the :not([type="checkbox"]) qualifier from the
+   shared focus rule above so both rules share specificity (0,3,1) and
+   source order - not specificity - decides the tie; a plain `.table
+   input:focus-visible` (0,2,1) would lose to that rule's outline-offset. */
+.table input:not([type="checkbox"]):focus-visible,
+.table textarea:focus-visible,
+.table .selectTrigger:focus-visible {
+  outline-offset: var(--fieldFocusOffsetTight);
+}
+
+.table .selectTrigger:focus-visible { border-color: var(--text); }
+
+.filterField { flex: 0 0 auto; }
+
+.dangerButton {
+  display: inline-flex;
+  min-height: 37px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(222, 86, 67, .4);
+  border-radius: 8px;
+  padding: 9px 14px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.dangerButton:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(222, 86, 67, .08);
+}
+
+.dangerButton:disabled { opacity: .4; cursor: default; }
+
+.table textarea {
+  min-height: 34px;
+  resize: vertical;
+  overflow-y: auto;
+  line-height: 1.4;
+}
+
+.selectTrigger {
+  display: flex;
+  width: 100%;
+  min-width: 108px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--field);
+  border-radius: 7px;
+  outline: none;
+  padding: 8px 9px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.selectTriangle {
+  width: 0;
+  height: 0;
+  flex: none;
+  border-top: 5px solid var(--text);
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+
+.selectMenu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 150px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .14);
+}
+
+.selectOption {
+  padding: 9px 11px;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.selectOption[data-active="true"] { background: rgba(94, 113, 86, .12); }
+.selectOption[aria-selected="true"] { font-weight: 600; }
+.controls input:disabled { background: var(--card); color: var(--muted); cursor: default; }
+.table input:disabled,
+.table textarea:disabled,
+.selectTrigger:disabled { background: transparent; color: var(--muted); cursor: default; }
+
+.validation {
+  flex: none;
+  border-bottom: 1px solid rgba(222, 86, 67, .22);
+  padding: 10px 22px;
+  background: rgba(222, 86, 67, .08);
+  color: #8d3529;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.validation ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px 18px;
+  margin-top: 5px;
+}
+
+.tableWrap { min-height: 0; flex: 1 1 auto; overflow: auto; }
+.table { width: 100%; min-width: 1380px; border-collapse: collapse; table-layout: fixed; }
+/* Shadow matches the reader navbar; clip-path keeps each sticky cell's shadow
+   from bleeding sideways onto its neighbors so the header reads as one bar. */
+.table th { position: sticky; z-index: 1; top: 0; padding: 10px; background: var(--card); box-shadow: 0 1px 5px rgba(0, 0, 0, .09); clip-path: inset(0 0 -24px 0); color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .14em; text-align: left; text-transform: uppercase; }
+.table td { border-bottom: 1px solid rgba(0, 0, 0, .035); padding: 9px 10px; vertical-align: top; }
+.invalidRow td { background: rgba(222, 86, 67, .07); }
+.invalidRow td:first-child { box-shadow: inset 3px 0 0 rgba(222, 86, 67, .55); }
+.table th:nth-child(1) { width: 13%; }
+.table th:nth-child(2) { width: 15%; }
+.table th:nth-child(3) { width: 14%; }
+.table th:nth-child(4) { width: 8%; }
+.table th:nth-child(5) { width: 9%; text-align: center; }
+.table th:nth-child(6) { width: 34%; }
+.table th:nth-child(7) { width: 7%; text-align: center; }
+.table th:first-child,
+.table td:first-child { padding-left: 18px; }
+.table td:nth-child(4),
+.table td:nth-child(5) {
+  padding-inline: 3px;
+}
+.table td:nth-child(5) { text-align: center; }
+.table td:nth-child(4) .selectTrigger {
+  width: 100%;
+  min-width: 100px;
+  max-width: 104px;
+  gap: 6px;
+  padding-inline: 7px;
+}
+
+.table tbody tr { cursor: pointer; }
+.table tbody tr:hover { background: rgba(0, 0, 0, .035); }
+.table tbody tr:focus-visible {
+  outline: 3px solid rgba(222, 86, 67, .28);
+  outline-offset: -3px;
+}
+.disabledRow td { opacity: .45; }
+.disabledRow td:focus-within { opacity: 1; }
+
+.segmentGroup {
+  display: inline-flex;
+  border-radius: 10px;
+  padding: 4px;
+  background: var(--card);
+}
+
+.segmentButton {
+  position: relative;
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  outline: none;
+  padding: 5px 11px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  transition: all .2s;
+  white-space: nowrap;
+}
+
+.segmentButton svg { display: block; }
+.segmentButton:hover:not(:disabled):not([aria-pressed="true"]) { color: var(--text); }
+.segmentButton:focus-visible { outline: 3px solid rgba(222, 86, 67, .18); outline-offset: -1px; }
+.segmentButton[aria-pressed="true"] {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .12);
+}
+.segmentButton:disabled { opacity: .55; cursor: default; }
+
+/* Same tooltip treatment as the reader navbar icons. */
+.segmentTip {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 5px);
+  left: 50%;
+  border-radius: 4px;
+  padding: 12px 13px;
+  background: #1e1e21;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: .05em;
+  opacity: 0;
+  pointer-events: none;
+  text-transform: none;
+  transform: translateX(-50%) translateY(-3px);
+  transition: opacity .18s ease, transform .18s ease;
+  white-space: nowrap;
+}
+
+.segmentButton:not(:disabled):hover .segmentTip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.sourceToggle {
+  display: inline-block;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  padding: 2px 3px 3px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sourceToggle:hover:not(:disabled),
+.sourceToggle:focus-visible {
+  background: rgba(0, 0, 0, .08);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .42);
+}
+.sourceToggle:focus-visible {
+  outline: 3px solid rgba(0, 0, 0, .16);
+  outline-offset: 2px;
+}
+.sourceToggle:disabled { cursor: default; }
+
+.genderGroup { display: inline-flex; gap: 2px; padding-top: 2px; }
+
+.genderButton {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.genderButton svg { display: block; }
+.genderButton:hover:not(:disabled) { background: rgba(0, 0, 0, .08); }
+.genderButton:focus-visible {
+  outline: 3px solid rgba(222, 86, 67, .18);
+  outline-offset: 1px;
+}
+.genderButton[aria-pressed="true"] { background: rgba(0, 0, 0, .08); }
+.genderButton[data-gender="male"][aria-pressed="true"] { color: #2563eb; }
+.genderButton[data-gender="female"][aria-pressed="true"] { color: #dc2626; }
+.genderButton[data-gender="unknown"][aria-pressed="true"] { color: var(--text); }
+.genderButton:disabled { cursor: default; opacity: .5; }
+
+.usageCount {
+  padding-top: 17px !important;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.emptyTable { padding: 34px; color: var(--muted); font-size: 13px; text-align: center; }
+
+.footer { flex: none; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--line); padding: 14px 22px; }
+
+.confirmOverlay { position: absolute; z-index: 2; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .5); backdrop-filter: blur(5px); }
+.confirmDialog { width: 470px; max-width: 100%; border: 1px solid var(--line); border-radius: 14px; outline: none; padding: 26px; background: var(--bg); box-shadow: 0 20px 70px rgba(0, 0, 0, .25); }
+.confirmDialog h3 { font-size: 18px; line-height: 1.4; }
+.confirmDialog p { margin-top: 9px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.confirmActions { justify-content: flex-end; gap: 10px; margin-top: 22px; }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+
+/* The reviewer is a full-screen surface below 900px, so its modals match it
+   edge to edge instead of floating on a padded backdrop. */
+@media (max-width: 900px) {
+  .overlay { align-items: stretch; padding: 0; }
+
+  .dialog {
+    width: 100%;
+    max-width: 100vw;
+    min-height: 100vh;
+    max-height: 100vh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .controls { flex-wrap: wrap; }
+  .searchField { flex: 1 0 100%; }
+  .validation ul { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .header,
+  .controls,
+  .validation,
+  .footer {
+    padding-right: 13px;
+    padding-left: 13px;
+  }
+
+  .footer { flex-wrap: wrap; }
+}

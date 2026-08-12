@@ -110,19 +110,34 @@ async function expectPreviewAnnouncementHelp(
   })).toBe(viewport.width);
   await expect.poll(() => drawer.evaluate((element) => (
     Math.round(element.getBoundingClientRect().width)
-  ))).toBe(Math.min(380, viewport.width));
+  ))).toBe(Math.min(440, viewport.width));
 
   const widthsOpen = await Promise.all([source, english, qa].map(async (locator) => (
     (await locator.boundingBox())?.width
   )));
   expect(widthsOpen).toEqual(widthsBefore);
-  await help.click();
   await announcement.getByText(
     "This is a preview. Click help for details about reviewer features.",
   ).click();
   await page.keyboard.press("Escape");
   await expect(drawer).not.toHaveAttribute("aria-hidden");
   await expect(page.getByRole("status")).toHaveAttribute("data-show", "false");
+
+  await help.click();
+  await expect(drawer).toHaveAttribute("aria-hidden", "true");
+  await help.click();
+  await expect(close).toBeFocused();
+
+  const drawerCoversViewport = await drawer.evaluate((element) => (
+    Math.round(element.getBoundingClientRect().left) <= 0
+  ));
+  if (!drawerCoversViewport) {
+    await english.click({ position: { x: 20, y: 20 } });
+    await expect(drawer).toHaveAttribute("aria-hidden", "true");
+    await expect(page.getByRole("status")).toHaveAttribute("data-show", "false");
+    await help.click();
+    await expect(close).toBeFocused();
+  }
 
   await page.getByRole("button", { name: "Dismiss preview announcement" }).click();
   await expect(announcement).toBeHidden();
@@ -369,9 +384,59 @@ for (const viewport of [
     if (await qaSidebar.getAttribute("data-expanded") !== "true") {
       await firstWarningIcon.click();
     }
-    await expectPreviewGuard(page, () => page.getByRole("button", {
-      name: "Edit glossary",
-    }).click());
+    const glossaryOpener = page.getByRole("button", { name: "Edit glossary" });
+    await glossaryOpener.click();
+    const glossaryDialog = page.getByRole("dialog", { name: "Edit glossary" });
+    await expect(glossaryDialog).toBeVisible();
+    await expect(reviewer).toHaveAttribute("inert", "");
+    await expectViewportContained(page);
+    await captureVisualQa(page, testInfo.outputPath(`${viewport.name}-glossary.png`));
+
+    // Character rows carry the three-way gender picker, so start from one.
+    const characterRow = glossaryDialog.locator('tbody tr:has([role="group"])').first();
+    const glossaryTerm = ((await characterRow.getByRole("button", { name: /^Copy /u })
+      .textContent()) ?? "").trim();
+    expect(glossaryTerm).toBeTruthy();
+    await expect(characterRow.getByRole("group", { name: `Gender for ${glossaryTerm}` }))
+      .toBeVisible();
+
+    // The kind cell is a listbox trigger carrying the solid triangle marker.
+    const kindTrigger = characterRow.getByRole("combobox");
+    await expect(kindTrigger.locator("[data-select-triangle]")).toHaveCount(1);
+    await kindTrigger.click();
+    await expect(page.getByRole("listbox", { name: `Kind for ${glossaryTerm}` })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await expect(glossaryDialog).toBeVisible();
+
+    const glossarySearch = glossaryDialog.getByRole("textbox", { name: "Search" });
+    await glossarySearch.fill("no-preview-glossary-match");
+    await expect(glossaryDialog.getByText("No glossary entries match these filters."))
+      .toBeVisible();
+    await glossarySearch.fill("");
+    await expect(characterRow).toBeVisible();
+
+    for (let index = 0; index < 8; index += 1) {
+      await page.keyboard.press("Tab");
+      expect(await glossaryDialog.evaluate((dialog) => dialog.contains(document.activeElement)))
+        .toBe(true);
+    }
+
+    const saveGlossary = glossaryDialog.getByRole("button", { name: "Save glossary" });
+    await expect(saveGlossary).toBeDisabled();
+    await glossaryDialog.getByRole("textbox", { name: `Canonical target for ${glossaryTerm}` })
+      .fill("Preview Renamed Target");
+    await expect(saveGlossary).toBeEnabled();
+    await saveGlossary.click();
+    await expect(page.getByRole("status")).toHaveText(
+      "Glossary saved. QA checks were updated for this chapter.",
+    );
+    await expect(saveGlossary).toBeDisabled();
+    await glossaryDialog.getByRole("button", { name: "Close glossary editor" }).click();
+    await expect(glossaryDialog).toBeHidden();
+    await expect(glossaryOpener).toBeFocused();
+    // The renamed target is absent from the translation, so QA re-reports it.
+    await expect(page.getByTestId(`qa-warning-glossary_mismatch:${glossaryTerm}`)).toBeVisible();
 
     await page.getByRole("button", { name: "Retranslate" }).click();
     const retryDialog = page.getByRole("dialog", { name: /Revise chapter 25/iu });
@@ -441,6 +506,47 @@ for (const viewport of [
 
     expect(trafficViolations).toEqual([]);
     expect(websocketViolations).toEqual([]);
+  });
+}
+
+async function measureFindAnchor(page: Page) {
+  return page.evaluate(() => {
+    const bounds = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(`Missing element for ${selector}`);
+      return element.getBoundingClientRect();
+    };
+    const header = bounds("header");
+    const icon = bounds('button[aria-label="Find and replace"]');
+    const panel = bounds('[data-testid="find-replace-panel"]');
+    return {
+      belowIcon: Math.round(panel.top - icon.bottom),
+      fromHeaderBottom: Math.round(panel.top - header.bottom),
+    };
+  });
+}
+
+for (const viewport of [
+  { name: "desktop", width: 1440, height: 1000 },
+  { name: "mobile", width: 390, height: 844 },
+]) {
+  test(`${viewport.name} find panel hangs off the header in both announcement states`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Find and replace" }).click();
+    await expect(page.getByTestId("find-replace-panel")).toBeVisible();
+
+    const withAnnouncement = await measureFindAnchor(page);
+    expect(withAnnouncement.belowIcon).toBeGreaterThan(0);
+
+    await page.getByRole("button", { name: "Dismiss preview announcement" }).click();
+    await expect(page.getByTestId("reviewer-preview-announcement")).toBeHidden();
+
+    const withoutAnnouncement = await measureFindAnchor(page);
+    expect(withoutAnnouncement.belowIcon).toBe(withAnnouncement.belowIcon);
+    expect(withoutAnnouncement.fromHeaderBottom).toBe(withAnnouncement.fromHeaderBottom);
   });
 }
 

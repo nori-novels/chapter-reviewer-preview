@@ -115,13 +115,20 @@ it("keeps every glossary edit local without mutating the glossary prop", async (
   await user.type(accepted, "Local accepted edit");
   expect(accepted).toHaveValue("Local accepted edit");
 
-  const gender = screen.getByRole("combobox", { name: "Gender for Synthetic source" });
-  await user.selectOptions(gender, "female");
-  expect(gender).toHaveValue("female");
+  const female = screen.getByRole("button", { name: "Gender for Synthetic source: female" });
+  expect(female).toHaveAttribute("aria-pressed", "false");
+  await user.click(female);
+  expect(female).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "Gender for Synthetic source: male" }))
+    .toHaveAttribute("aria-pressed", "false");
 
-  const kind = screen.getByRole("combobox", { name: "Kind for Synthetic source" });
-  await user.selectOptions(kind, "term");
-  expect(kind).toHaveValue("term");
+  const kind = screen.getByRole("combobox", { name: "Kind for Synthetic source: character" });
+  expect(kind.querySelector("[data-select-triangle]")).not.toBeNull();
+  await user.click(kind);
+  await user.click(screen.getByRole("option", { name: "term" }));
+  expect(screen.getByRole("combobox", { name: "Kind for Synthetic source: term" })).toBeVisible();
+  // Gender only applies to characters, so its picker leaves with the kind.
+  expect(screen.queryByRole("group", { name: "Gender for Synthetic source" })).toBeNull();
 
   const note = screen.getByRole("textbox", { name: "Note for Synthetic source" });
   await user.clear(note);
@@ -137,6 +144,44 @@ it("keeps every glossary edit local without mutating the glossary prop", async (
   })).toBeVisible();
 
   expect(glossary).toEqual(originalGlossary);
+});
+
+it("blocks retry while a glossary row is invalid", async () => {
+  const user = userEvent.setup();
+  renderRetryModal(SYNTHETIC_GLOSSARY.map((entry) => ({
+    ...entry,
+    acceptedTargets: [...entry.acceptedTargets],
+  })));
+  const retry = screen.getByRole("button", { name: "Retry translation" });
+  expect(retry).toBeEnabled();
+
+  await user.clear(screen.getByRole("textbox", { name: "Canonical target for Synthetic source" }));
+
+  expect(retry).toBeDisabled();
+  expect(screen.getByText("Row 1: canonical target is required.")).toBeVisible();
+  expect(screen.getByRole("row", {
+    name: "Toggle enabled state for Synthetic source. Currently enabled.",
+  })).toHaveAttribute("aria-invalid", "true");
+
+  await user.type(
+    screen.getByRole("textbox", { name: "Canonical target for Synthetic source" }),
+    "Restored target",
+  );
+
+  expect(retry).toBeEnabled();
+  expect(screen.queryByLabelText("Glossary validation")).toBeNull();
+});
+
+it("copies a glossary source term", async () => {
+  const user = userEvent.setup();
+  renderRetryModal(SYNTHETIC_GLOSSARY.map((entry) => ({
+    ...entry,
+    acceptedTargets: [...entry.acceptedTargets],
+  })));
+
+  await user.click(screen.getByRole("button", { name: "Copy Synthetic source" }));
+
+  expect(screen.getByText("Term copied to clipboard")).toHaveAttribute("data-show", "true");
 });
 
 it.each(["Close retry", "Cancel"])("calls onClose from %s", async (name) => {

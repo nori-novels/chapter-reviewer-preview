@@ -23,13 +23,13 @@ function renderReviewer(fixture = previewFixture) {
 }
 
 const REVIEWER_FEATURES = [
-  ["QA rail", "Summarizes warnings, expands for details, and jumps to affected source and translation text."],
+  ["QA rail", "Hovering over the QA rail to the left automatically expands it to show errors. Summarizes warnings, expands for details, and jumps to affected source and translation text."],
   ["Warning navigation", "Moves among repeated occurrences of the selected issue."],
-  ["Find and replace", "Searches the English draft, navigates matches, and replaces one or all matches."],
+  ["Find and replace", "Searches the English draft, navigates matches, and replaces one or all matches. Found terms are highlighted in orange, and the term to be replaced is highlighted in yellow."],
   ["Align paragraphs", "Pairs source and translation paragraphs for direct comparison and editing."],
   ["Sync scrolling", "Keeps the source and translation panes moving together."],
-  ["Glossary editing", "Opens the relevant glossary entry so terminology can be corrected at its source."],
-  ["Retranslate", "Opens anonymized prompts so the retranslation workflow can be explored locally."],
+  ["Glossary editing", "Opens the relevant glossary entry so terminology can be corrected at its source. Glossary mismatch QA is live, and applying changes rechecks the term across every chapter."],
+  ["Retranslate", "Allows the translator to adjust glossary terms found in the chapter and prompts and send the chapter back to the model for retranslation."],
 ] as const;
 
 it("shows the preview announcement for each mounted preview session", async () => {
@@ -48,7 +48,7 @@ it("shows the preview announcement for each mounted preview session", async () =
   expect(screen.getByTestId("reviewer-preview-announcement")).toBeVisible();
 });
 
-it("opens public feature help and closes it only through its own X", async () => {
+it("opens public feature help and closes it through its X, the help button, or an outside press", async () => {
   const user = userEvent.setup();
   renderReviewer();
   const help = screen.getByRole("button", { name: "Reviewer feature help" });
@@ -65,13 +65,27 @@ it("opens public feature help and closes it only through its own X", async () =>
     expect(within(drawer).getByText(description)).toBeVisible();
   }
 
-  await user.click(help);
-  fireEvent.mouseDown(screen.getByTestId("chapter-english-scroller"));
   await user.keyboard("{Escape}");
   expect(drawer).not.toHaveAttribute("aria-hidden");
   expect(screen.getByRole("status")).toHaveAttribute("data-show", "false");
 
-  await user.click(close);
+  fireEvent.mouseDown(within(drawer).getByRole("heading", { name: "Chapter reviewer features" }));
+  expect(drawer).not.toHaveAttribute("aria-hidden");
+
+  fireEvent.mouseDown(screen.getByTestId("chapter-english-scroller"));
+  await waitFor(() => expect(drawer).toHaveAttribute("aria-hidden", "true"));
+  await waitFor(() => expect(help).toHaveFocus());
+
+  await user.click(help);
+  await waitFor(() => expect(drawer).not.toHaveAttribute("aria-hidden"));
+  await user.click(help);
+  await waitFor(() => expect(drawer).toHaveAttribute("aria-hidden", "true"));
+
+  await user.click(help);
+  await waitFor(() => expect(screen.getByRole("button", {
+    name: "Close reviewer feature help",
+  })).toHaveFocus());
+  await user.click(screen.getByRole("button", { name: "Close reviewer feature help" }));
   await waitFor(() => expect(help).toHaveFocus());
   expect(drawer).toHaveAttribute("aria-hidden", "true");
 });
@@ -113,6 +127,16 @@ async function openRetryModal() {
   await user.click(opener);
   const retryDialog = screen.getByRole("dialog", { name: /Revise chapter 25/iu });
   return { user, reviewerDialog, retryDialog, opener };
+}
+
+async function openGlossaryModal() {
+  const user = userEvent.setup();
+  const reviewerDialog = screen.getByRole("dialog", { name: /Chapter 25/iu });
+  await user.click(screen.getAllByRole("button", { name: /warnings$/iu })[0]!);
+  const opener = screen.getByRole("button", { name: "Edit glossary" });
+  await user.click(opener);
+  const glossaryDialog = screen.getByRole("dialog", { name: "Edit glossary" });
+  return { user, reviewerDialog, glossaryDialog, opener };
 }
 
 async function expectPreviewGuard(name: string) {
@@ -282,17 +306,94 @@ it("expands the QA rail and selects a warning", async () => {
   ).not.toHaveLength(0);
 });
 
-it("guards the glossary mutation action", async () => {
-  const user = userEvent.setup();
+it("makes the reviewer inert and hidden while the glossary editor is active", async () => {
   renderReviewer();
+  const { reviewerDialog, glossaryDialog } = await openGlossaryModal();
 
-  await user.click(screen.getAllByRole("button", { name: /warnings$/iu })[0]!);
-  await user.click(screen.getByRole("button", { name: "Edit glossary" }));
+  expect(reviewerDialog).toHaveAttribute("aria-hidden", "true");
+  expect(reviewerDialog).toHaveAttribute("inert");
+  expect(reviewerDialog).not.toContainElement(glossaryDialog);
+  expect(screen.getAllByRole("dialog")).toEqual([glossaryDialog]);
+  expect(glossaryDialog).toHaveAttribute("aria-modal", "true");
+});
 
-  expect(screen.getByText(PREVIEW_UNAVAILABLE_MESSAGE)).toHaveAttribute(
-    "data-show",
-    "true",
+it.each(["Cancel", "Close glossary editor", "Escape", "backdrop"] as const)(
+  "closes the glossary editor via %s and restores reviewer semantics and opener focus",
+  async (action) => {
+    renderReviewer();
+    const { user, reviewerDialog, glossaryDialog, opener } = await openGlossaryModal();
+
+    if (action === "Escape") {
+      await user.keyboard("{Escape}");
+    } else if (action === "backdrop") {
+      const backdrop = glossaryDialog.parentElement;
+      expect(backdrop).not.toBeNull();
+      fireEvent.mouseDown(backdrop!);
+    } else {
+      await user.click(screen.getByRole("button", { name: action }));
+    }
+
+    expect(screen.queryByRole("dialog", { name: "Edit glossary" })).toBeNull();
+    expect(reviewerDialog).not.toHaveAttribute("aria-hidden");
+    expect(reviewerDialog).not.toHaveAttribute("inert");
+    await waitFor(() => expect(opener).toHaveFocus());
+  },
+);
+
+it("applies saved glossary edits to the QA rail and the retranslate modal", async () => {
+  renderReviewer();
+  const { user } = await openGlossaryModal();
+  const entry = previewFixture.chapter.relevantGlossary[0]!;
+  expect(screen.queryByTestId(`qa-warning-glossary_mismatch:${entry.source}`)).toBeNull();
+
+  const save = screen.getByRole("button", { name: "Save glossary" });
+  expect(save).toBeDisabled();
+  const target = screen.getByRole("textbox", { name: `Canonical target for ${entry.source}` });
+  expect(target).toHaveValue(entry.target);
+  await user.clear(target);
+  await user.type(target, "Renamed Preview Target");
+  expect(save).toBeEnabled();
+  await user.click(save);
+
+  expect(screen.getByText("Glossary saved. QA checks were updated for this chapter."))
+    .toHaveAttribute("data-show", "true");
+  expect(save).toBeDisabled();
+
+  await user.click(screen.getByRole("button", { name: "Close glossary editor" }));
+
+  // The renamed target no longer appears in the translation, so the chapter's
+  // QA rail reports it as a mismatch and Retranslate carries the new value.
+  expect(screen.getByTestId(`qa-warning-glossary_mismatch:${entry.source}`)).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Retranslate" }));
+  expect(screen.getByRole("textbox", { name: `Canonical target for ${entry.source}` }))
+    .toHaveValue("Renamed Preview Target");
+});
+
+it("confirms before discarding unsaved glossary edits", async () => {
+  renderReviewer();
+  const { user } = await openGlossaryModal();
+  const entry = previewFixture.chapter.relevantGlossary[0]!;
+
+  await user.type(
+    screen.getByRole("textbox", { name: `Note for ${entry.source}` }),
+    " unsaved",
   );
+  await user.click(screen.getByRole("button", { name: "Close glossary editor" }));
+
+  const confirm = screen.getByRole("alertdialog", { name: "Discard glossary changes?" });
+  await waitFor(() => expect(
+    within(confirm).getByRole("button", { name: "Discard changes" }),
+  ).toHaveFocus());
+  await user.click(within(confirm).getByRole("button", { name: "Keep editing" }));
+
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.getByRole("dialog", { name: "Edit glossary" })).toBeVisible();
+
+  await user.click(screen.getByRole("button", { name: "Close glossary editor" }));
+  await user.click(screen.getByRole("button", { name: "Discard changes" }));
+
+  expect(screen.queryByRole("dialog", { name: "Edit glossary" })).toBeNull();
+  expect(screen.getByTestId("qa-warning-list")).toBeVisible();
 });
 
 it("makes the reviewer inert and hidden while Retranslate is active", async () => {

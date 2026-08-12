@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./chapterReview.module.css";
 
 interface PreviewAnnouncementHelpProps {
@@ -9,13 +9,13 @@ interface PreviewAnnouncementHelpProps {
 }
 
 const FEATURES = [
-  ["QA rail", "Summarizes warnings, expands for details, and jumps to affected source and translation text."],
+  ["QA rail", "Hovering over the QA rail to the left automatically expands it to show errors. Summarizes warnings, expands for details, and jumps to affected source and translation text."],
   ["Warning navigation", "Moves among repeated occurrences of the selected issue."],
-  ["Find and replace", "Searches the English draft, navigates matches, and replaces one or all matches."],
+  ["Find and replace", "Searches the English draft, navigates matches, and replaces one or all matches. Found terms are highlighted in orange, and the term to be replaced is highlighted in yellow."],
   ["Align paragraphs", "Pairs source and translation paragraphs for direct comparison and editing."],
   ["Sync scrolling", "Keeps the source and translation panes moving together."],
-  ["Glossary editing", "Opens the relevant glossary entry so terminology can be corrected at its source."],
-  ["Retranslate", "Opens anonymized prompts so the retranslation workflow can be explored locally."],
+  ["Glossary editing", "Opens the relevant glossary entry so terminology can be corrected at its source. Glossary mismatch QA is live, and applying changes rechecks the term across every chapter."],
+  ["Retranslate", "Allows the translator to adjust glossary terms found in the chapter and prompts and send the chapter back to the model for retranslation."],
 ] as const;
 
 function CloseGlyph() {
@@ -33,6 +33,8 @@ export function PreviewAnnouncementHelp({
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const helpRef = useRef<HTMLButtonElement | null>(null);
+  const announcementRef = useRef<HTMLDivElement | null>(null);
+  const drawerRef = useRef<HTMLElement | null>(null);
   const drawerCloseRef = useRef<HTMLButtonElement | null>(null);
 
   function focusNext(target: HTMLElement | null, fallback?: () => void) {
@@ -49,11 +51,34 @@ export function PreviewAnnouncementHelp({
     focusNext(drawerCloseRef.current);
   }
 
-  function closeDrawer() {
+  const closeDrawer = useCallback((restoreFocus = true) => {
     setDrawerOpen(false);
     onDrawerOpenChange(false);
-    focusNext(helpRef.current, fallbackFocus);
-  }
+    if (restoreFocus) focusNext(helpRef.current, fallbackFocus);
+  }, [fallbackFocus, onDrawerOpenChange]);
+
+  // Any press outside the drawer dismisses it, except on the announcement bar
+  // that owns the help toggle. The press keeps its normal effect on whatever it
+  // landed on, so focus is only pulled back to the help button when the press
+  // left nothing focused and the drawer would otherwise go inert around it.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    function handlePressOutside(event: MouseEvent) {
+      const target = event.target instanceof Node ? event.target : null;
+      if (!target) return;
+      if (drawerRef.current?.contains(target)) return;
+      if (announcementRef.current?.contains(target)) return;
+      const drawer = drawerRef.current;
+      closeDrawer(false);
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        const stranded = !active || active === document.body || !!drawer?.contains(active);
+        if (stranded) focusNext(helpRef.current, fallbackFocus);
+      });
+    }
+    document.addEventListener("mousedown", handlePressOutside);
+    return () => document.removeEventListener("mousedown", handlePressOutside);
+  }, [closeDrawer, drawerOpen, fallbackFocus]);
 
   function dismissAnnouncement() {
     setAnnouncementVisible(false);
@@ -63,7 +88,7 @@ export function PreviewAnnouncementHelp({
   return (
     <>
       {announcementVisible && (
-        <div className={styles.previewAnnouncement} data-testid="reviewer-preview-announcement" role="note">
+        <div ref={announcementRef} className={styles.previewAnnouncement} data-testid="reviewer-preview-announcement" role="note">
           <span aria-hidden="true" />
           <div className={styles.previewMessage}>
             <span>This is a preview. Click help for details about reviewer features.</span>
@@ -74,7 +99,7 @@ export function PreviewAnnouncementHelp({
               aria-label="Reviewer feature help"
               aria-expanded={drawerOpen}
               aria-controls="chapter-review-feature-help"
-              onClick={openDrawer}
+              onClick={() => (drawerOpen ? closeDrawer() : openDrawer())}
             >
               <span aria-hidden="true">?</span>
             </button>
@@ -90,6 +115,7 @@ export function PreviewAnnouncementHelp({
         </div>
       )}
       <aside
+        ref={drawerRef}
         id="chapter-review-feature-help"
         className={styles.previewHelpDrawer}
         data-testid="reviewer-help-drawer"
@@ -106,7 +132,7 @@ export function PreviewAnnouncementHelp({
             className={styles.drawerCloseButton}
             type="button"
             aria-label="Close reviewer feature help"
-            onClick={closeDrawer}
+            onClick={() => closeDrawer()}
           >
             <CloseGlyph />
           </button>

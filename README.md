@@ -19,6 +19,8 @@ npm run test && npm run lint && npm run build && npm run scan:public && npm run 
 
 ## Preview behavior
 
-Title and chapter edits, find and replace, comparison preferences, QA navigation, glossary-term copying, and Retranslate exploration stay in the browser. Reloading the page resets chapter edits to the committed public fixture.
+Title and chapter edits, find and replace, comparison preferences, QA navigation, glossary-term copying, glossary editing, and Retranslate exploration stay in the browser. Reloading the page resets chapter edits to the committed public fixture.
 
-The preview intentionally shows `This function is not available in the preview.` for Previous chapter, Next chapter, a non-current chapter-index selection, Save changes, Approve with override, Edit glossary, Retry translation submission, Close chapter review, the main backdrop, and Escape at the full-screen reviewer boundary. Cancel, the Retranslate close button, its backdrop, and Escape inside Retranslate only close that local modal.
+Edit glossary opens the full glossary editor. Saving it rewrites the chapter's working glossary in browser memory, which re-runs the glossary mismatch and pronoun checks against the current draft, exactly as a real save does. Nothing leaves the browser and a reload restores the committed fixture glossary.
+
+The preview intentionally shows `This function is not available in the preview.` for Previous chapter, Next chapter, a non-current chapter-index selection, Save changes, Approve with override, Retry translation submission, Close chapter review, the main backdrop, and Escape at the full-screen reviewer boundary. Cancel, the close button, the backdrop, and Escape inside the Retranslate and Edit glossary modals only close that local modal.

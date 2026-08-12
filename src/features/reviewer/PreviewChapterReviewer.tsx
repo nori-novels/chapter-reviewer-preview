@@ -15,18 +15,21 @@ import {
   type PreviewGuard,
 } from "@/features/preview/copy";
 import type { PreviewFixture } from "@/features/preview/fixture";
+import type { GlossaryEntry } from "@/features/preview/types";
 import { ChapterComparison, type ComparisonScrollTarget } from "./ChapterComparison";
 import { ChapterIndexMenu } from "./ChapterIndexMenu";
 import { ChapterQaSidebar } from "./ChapterQaSidebar";
 import { ChapterReviewMetadata } from "./ChapterReviewMetadata";
 import { FindReplacePanel, type FindReplaceState } from "./FindReplacePanel";
 import { PreviewAnnouncementHelp } from "./PreviewAnnouncementHelp";
+import { PreviewGlossaryModal } from "./PreviewGlossaryModal";
 import { PreviewRetryModal } from "./PreviewRetryModal";
 import {
   type ComparisonPreferences,
   requiresApprovalOverride,
 } from "./chapter-review";
 import type { FindCurrentMatch } from "./find-replace";
+import { glossaryUsageBySource } from "./glossary";
 import {
   collectQaWarnings,
   qaWarningKey,
@@ -91,6 +94,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   const indexOpenerRef = useRef<HTMLElement | null>(null);
   const findOpenerRef = useRef<HTMLElement | null>(null);
   const retryOpenerRef = useRef<HTMLElement | null>(null);
+  const glossaryOpenerRef = useRef<HTMLElement | null>(null);
   const findInputRef = useRef<HTMLInputElement | null>(null);
   const findOpenRef = useRef(false);
   const helpDrawerOpenRef = useRef(false);
@@ -116,6 +120,15 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   });
   const [findCurrent, setFindCurrent] = useState<FindCurrentMatch | null>(null);
   const [retryOpen, setRetryOpen] = useState(false);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
+  // The working glossary. Editing it re-runs mismatch and pronoun detection
+  // against the current draft, exactly as saving does in the real reviewer.
+  const [glossary, setGlossary] = useState<GlossaryEntry[]>(
+    () => fixture.chapter.relevantGlossary.map((entry) => ({
+      ...entry,
+      acceptedTargets: [...entry.acceptedTargets],
+    })),
+  );
 
   const showPreviewUnavailable: PreviewGuard = useCallback(
     () => show(PREVIEW_UNAVAILABLE_MESSAGE),
@@ -149,6 +162,12 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
     focusInsideDialog(retryOpenerRef.current);
   }, [focusInsideDialog]);
 
+  const closeGlossaryModal = useCallback(() => {
+    setSidebarExpanded(true);
+    setGlossaryOpen(false);
+    focusInsideDialog(glossaryOpenerRef.current);
+  }, [focusInsideDialog]);
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -160,7 +179,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
-      if (retryOpen) return;
+      if (retryOpen || glossaryOpen) return;
       if (helpDrawerOpenRef.current && event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
@@ -199,7 +218,14 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
     }
     document.addEventListener("keydown", handleKey, true);
     return () => document.removeEventListener("keydown", handleKey, true);
-  }, [closeFindPanel, closeIndexMenu, indexOpen, retryOpen, showPreviewUnavailable]);
+  }, [
+    closeFindPanel,
+    closeIndexMenu,
+    glossaryOpen,
+    indexOpen,
+    retryOpen,
+    showPreviewUnavailable,
+  ]);
 
   function togglePreference(key: keyof ComparisonPreferences) {
     setPreferences((current) => ({ ...current, [key]: !current[key] }));
@@ -212,8 +238,12 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
     sourceBody: fixture.chapter.sourceBody,
     translatedTitle: title,
     translatedBody: body,
-    glossary: fixture.chapter.relevantGlossary,
-  }), [body, fixture.chapter, title]);
+    glossary,
+  }), [body, fixture.chapter, glossary, title]);
+  const usageBySource = useMemo(() => glossaryUsageBySource(
+    `${fixture.chapter.sourceTitle}\n${fixture.chapter.sourceBody}`,
+    glossary.map((entry) => entry.source),
+  ), [fixture.chapter, glossary]);
   const glossaryMismatches = useMemo(() => warnings.flatMap((warning) => (
     warning.type === "glossary_mismatch" ? [warning.entry] : []
   )), [warnings]);
@@ -267,8 +297,8 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        aria-hidden={retryOpen || undefined}
-        inert={retryOpen || undefined}
+        aria-hidden={(retryOpen || glossaryOpen) || undefined}
+        inert={(retryOpen || glossaryOpen) || undefined}
         tabIndex={-1}
       >
         <PreviewAnnouncementHelp
@@ -375,6 +405,21 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
               </svg>
             </button>
           </div>
+          {/* The panel hangs off the header so it stays under the find icon
+              whether or not the preview announcement is showing. */}
+          {findOpen && (
+            <FindReplacePanel
+              body={body}
+              state={findState}
+              disabled={false}
+              findInputRef={findInputRef}
+              onStateChange={setFindState}
+              onBodyChange={setBody}
+              onNavigate={handleFindNavigate}
+              onCurrentMatchChange={setFindCurrent}
+              onClose={closeFindPanel}
+            />
+          )}
         </header>
 
         <div className={styles.main}>
@@ -393,7 +438,10 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
               retryOpenerRef.current = opener;
               setRetryOpen(true);
             }}
-            onOpenGlossary={showPreviewUnavailable}
+            onOpenGlossary={(opener) => {
+              glossaryOpenerRef.current = opener;
+              setGlossaryOpen(true);
+            }}
           />
           <ChapterComparison
             preferences={preferences}
@@ -433,28 +481,21 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
             </Button>
           </div>
         </footer>
-
-        {findOpen && (
-          <FindReplacePanel
-            body={body}
-            state={findState}
-            disabled={false}
-            findInputRef={findInputRef}
-            onStateChange={setFindState}
-            onBodyChange={setBody}
-            onNavigate={handleFindNavigate}
-            onCurrentMatchChange={setFindCurrent}
-            onClose={closeFindPanel}
-          />
-        )}
-
       </div>
       {retryOpen && (
         <PreviewRetryModal
           ordinal={fixture.chapter.ordinal}
-          glossary={fixture.chapter.relevantGlossary}
+          glossary={glossary}
           onClose={closeRetryModal}
           onSubmit={showPreviewUnavailable}
+        />
+      )}
+      {glossaryOpen && (
+        <PreviewGlossaryModal
+          entries={glossary}
+          usageBySource={usageBySource}
+          onClose={closeGlossaryModal}
+          onSave={setGlossary}
         />
       )}
     </div>
