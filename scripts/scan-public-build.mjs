@@ -4,10 +4,52 @@ import path from "node:path";
 const ROOTS = ["src", "out"];
 const TEST_FILE = /(?:^|\/)(?:__tests__\/|[^/]+\.(?:test|spec)\.[^/]+$)/iu;
 
+const FIXTURE_METADATA_KEYS = [
+  "model",
+  "model_name",
+  "model_id",
+  "modelName",
+  "modelId",
+  "cost",
+  "cost_usd",
+  "costUsd",
+  "token_count",
+  "token_usage",
+  "input_tokens",
+  "output_tokens",
+  "tokenCount",
+  "tokenUsage",
+  "inputTokens",
+  "outputTokens",
+  "import_id",
+  "importId",
+  "request_id",
+  "requestId",
+  "created_by",
+  "createdBy",
+  "source_url",
+  "sourceUrl",
+  "user_id",
+  "userId",
+  "project_id",
+  "projectId",
+  "organization_id",
+  "organizationId",
+  "novel_id",
+  "novelId",
+  "chapter_id",
+  "chapterId",
+];
+
+function objectKeyPattern(keys) {
+  const alternatives = keys.join("|");
+  return new RegExp(`(?:["'](?:${alternatives})["']|\\b(?:${alternatives})\\b)\\s*:`, "iu");
+}
+
 const RULES = [
   {
     name: "uuid",
-    pattern: /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/iu,
+    pattern: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/iu,
   },
   { name: "supabase-reference", pattern: /\bsupabase\b/iu },
   { name: "api-route", pattern: /\/api\//iu },
@@ -23,16 +65,21 @@ const RULES = [
   },
   {
     name: "original-prompt-label",
-    pattern: /\b(?:Translation prompt|Editor prompt|TL note prompt)\b/iu,
+    pattern: /\b(?:Translation prompt|Editor prompt|TL note prompt|translation_prompt|editor_prompt|tl_note_prompt|translationPrompt|editorPrompt|tlNotePrompt)\b/iu,
     skipInTests: true,
   },
   {
     name: "fixture-metadata-key",
-    pattern: /(?:["'](?:model(?:_name|_id)?|cost(?:_usd)?|tokens?|token_(?:count|usage)|input_tokens|output_tokens|modelName|modelId|costUsd|tokenCount|tokenUsage|inputTokens|outputTokens|importId|request_id|created_by|source_url)["']|\b(?:model(?:_name|_id)?|cost(?:_usd)?|tokens?|token_(?:count|usage)|input_tokens|output_tokens|modelName|modelId|costUsd|tokenCount|tokenUsage|inputTokens|outputTokens|importId|request_id|created_by|source_url)\b)\s*:/iu,
+    pattern: objectKeyPattern(FIXTURE_METADATA_KEYS),
   },
   {
     name: "sensitive-config-key",
-    pattern: /(?:["'](?:SUPABASE_URL|SUPABASE_ANON_KEY|SERVICE_ROLE_KEY|DATABASE_URL|API_KEY|SECRET_KEY|ACCESS_TOKEN|AUTH_TOKEN)["']|\b(?:SUPABASE_URL|SUPABASE_ANON_KEY|SERVICE_ROLE_KEY|DATABASE_URL|API_KEY|SECRET_KEY|ACCESS_TOKEN|AUTH_TOKEN)\b)\s*(?::|=)/u,
+    pattern: /(?:["'](?:SUPABASE_URL|SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY|SERVICE_ROLE_KEY|DATABASE_URL|API_KEY|SECRET_KEY|CLIENT_SECRET|PRIVATE_KEY|JWT_SECRET|ACCESS_TOKEN|AUTH_TOKEN|NEXTAUTH_SECRET|AUTH_SECRET)["']|\b(?:SUPABASE_URL|SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY|SERVICE_ROLE_KEY|DATABASE_URL|API_KEY|SECRET_KEY|CLIENT_SECRET|PRIVATE_KEY|JWT_SECRET|ACCESS_TOKEN|AUTH_TOKEN|NEXTAUTH_SECRET|AUTH_SECRET)\b)\s*(?::|=)/u,
+  },
+  {
+    name: "environment-config",
+    pattern: /\b(?:process\.env|import\.meta\.env)(?:\.|\[)/u,
+    roots: ["src"],
   },
 ];
 
@@ -40,17 +87,32 @@ function displayPath(filePath) {
   return path.relative(process.cwd(), filePath).split(path.sep).join("/");
 }
 
-async function collectTextFiles(rootPath) {
-  const entries = await readdir(rootPath, { withFileTypes: true });
+async function collectTextFiles(rootPath, findings, isRoot = false) {
+  let entries;
+  try {
+    entries = await readdir(rootPath, { withFileTypes: true });
+  } catch {
+    findings.push({
+      file: displayPath(rootPath),
+      rule: isRoot ? "missing-or-unreadable-root" : "unreadable-directory",
+    });
+    return [];
+  }
   const files = [];
 
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     const entryPath = path.join(rootPath, entry.name);
     if (entry.isDirectory()) {
-      files.push(...await collectTextFiles(entryPath));
+      files.push(...await collectTextFiles(entryPath, findings));
     } else if (entry.isFile()) {
-      const contents = await readFile(entryPath);
-      if (!contents.includes(0)) files.push({ path: entryPath, text: contents.toString("utf8") });
+      try {
+        const contents = await readFile(entryPath);
+        if (!contents.includes(0)) files.push({ path: entryPath, text: contents.toString("utf8") });
+      } catch {
+        findings.push({ file: displayPath(entryPath), rule: "unreadable-file" });
+      }
+    } else {
+      findings.push({ file: displayPath(entryPath), rule: "unsupported-entry" });
     }
   }
 
@@ -62,17 +124,12 @@ async function scan() {
 
   for (const root of ROOTS) {
     const rootPath = path.resolve(process.cwd(), root);
-    let files;
-    try {
-      files = await collectTextFiles(rootPath);
-    } catch {
-      findings.push({ file: root, rule: "missing-or-unreadable-root" });
-      continue;
-    }
+    const files = await collectTextFiles(rootPath, findings, true);
 
     for (const file of files) {
       const relativePath = displayPath(file.path);
       for (const rule of RULES) {
+        if (rule.roots && !rule.roots.includes(root)) continue;
         if (rule.skipInTests && TEST_FILE.test(relativePath)) continue;
         if (rule.pattern.test(file.text)) findings.push({ file: relativePath, rule: rule.name });
       }

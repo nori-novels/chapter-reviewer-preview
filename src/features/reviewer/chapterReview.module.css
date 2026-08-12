@@ -1170,6 +1170,17 @@
     transform: none;
   }
 
+  .chapterNav .indexDropdown {
+    position: fixed;
+    top: 112px;
+    right: 13px;
+    left: auto;
+    width: min(320px, calc(100vw - 26px));
+    max-width: calc(100vw - 26px);
+    animation: none;
+    transform: none;
+  }
+
   .headerActions {
     grid-column: 1 / -1;
     grid-row: 2;

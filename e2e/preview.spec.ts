@@ -1,8 +1,13 @@
+import { createHash } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import {
-  PREVIEW_PROMPT,
-  PREVIEW_UNAVAILABLE_MESSAGE,
-} from "../src/features/preview/copy";
+
+const PREVIEW_UNAVAILABLE_MESSAGE = "This function is not available in the preview.";
+const PROMPT_CONTRACT = {
+  firstLine: "placeholder text",
+  lastLine: "mollia cum duris, sine pondere, habentia pondus.",
+  lineCount: 21,
+  sha256: "1e0e06a7c5e436fe9b55d632f960eba2a47896f06c00c88e2d01321dece44055",
+};
 
 const STATIC_RESOURCE_TYPES = new Set([
   "document",
@@ -13,10 +18,19 @@ const STATIC_RESOURCE_TYPES = new Set([
 ]);
 
 async function expectPreviewGuard(page: Page, action: () => Promise<unknown>) {
-  await action();
   const status = page.getByRole("status");
+  await expect(status).toHaveAttribute("data-show", "false", { timeout: 5_000 });
+  await action();
   await expect(status).toHaveAttribute("data-show", "true");
   await expect(status).toHaveText(PREVIEW_UNAVAILABLE_MESSAGE);
+}
+
+function expectPromptContract(value: string) {
+  const lines = value.split("\n");
+  expect(lines).toHaveLength(PROMPT_CONTRACT.lineCount);
+  expect(lines[0]).toBe(PROMPT_CONTRACT.firstLine);
+  expect(lines.at(-1)).toBe(PROMPT_CONTRACT.lastLine);
+  expect(createHash("sha256").update(value).digest("hex")).toBe(PROMPT_CONTRACT.sha256);
 }
 
 async function captureVisualQa(page: Page, outputPath: string) {
@@ -61,21 +75,35 @@ for (const viewport of [
   { name: "desktop", width: 1440, height: 1000 },
   { name: "mobile", width: 390, height: 844 },
 ]) {
-  test(`${viewport.name} reviewer preview`, async ({ page }, testInfo) => {
-    const baseURL = String(testInfo.project.use.baseURL);
-    const previewOrigin = new URL(baseURL).origin;
-    const applicationRequests: string[] = [];
+  test(`${viewport.name} reviewer preview`, async ({ context, page }, testInfo) => {
+    type RequestRecord = { method: string; resourceType: string; url: string };
+    const bootstrapRequests: RequestRecord[] = [];
+    const trafficViolations: RequestRecord[] = [];
+    const websocketViolations: string[] = [];
+    let allowedStaticUrls = new Set<string>();
+    let networkLocked = false;
 
-    page.on("request", (request) => {
+    const observeWebSockets = (candidate: Page) => {
+      candidate.on("websocket", (socket) => websocketViolations.push(socket.url()));
+    };
+    observeWebSockets(page);
+    context.on("page", observeWebSockets);
+    context.on("request", (request) => {
+      const record = {
+        method: request.method(),
+        resourceType: request.resourceType(),
+        url: request.url(),
+      };
+      if (!networkLocked) {
+        bootstrapRequests.push(record);
+        return;
+      }
       const resourceType = request.resourceType();
       const method = request.method();
-      const requestOrigin = new URL(request.url()).origin;
-      const isStaticRequest = STATIC_RESOURCE_TYPES.has(resourceType)
+      const isKnownStaticRequest = STATIC_RESOURCE_TYPES.has(resourceType)
         && (method === "GET" || method === "HEAD")
-        && requestOrigin === previewOrigin;
-      if (!isStaticRequest) {
-        applicationRequests.push(`${method} ${resourceType} ${request.url()}`);
-      }
+        && allowedStaticUrls.has(request.url());
+      if (!isKnownStaticRequest) trafficViolations.push(record);
     });
 
     await page.setViewportSize(viewport);
@@ -85,6 +113,33 @@ for (const viewport of [
     await expect(reviewer).toBeVisible();
     await expect(reviewer).toHaveAccessibleName(/Chapter 25/iu);
     await expect(page.getByText("Chapter 25", { exact: true }).first()).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    const previewOrigin = new URL(page.url()).origin;
+    const invalidBootstrapRequests = bootstrapRequests.filter((request) => (
+      !STATIC_RESOURCE_TYPES.has(request.resourceType)
+      || (request.method !== "GET" && request.method !== "HEAD")
+      || new URL(request.url).origin !== previewOrigin
+    ));
+    expect(invalidBootstrapRequests).toEqual([]);
+    expect(bootstrapRequests.some((request) => request.resourceType === "document")).toBe(true);
+    allowedStaticUrls = new Set(bootstrapRequests.map((request) => request.url));
+    expect(allowedStaticUrls.size).toBeGreaterThan(1);
+    networkLocked = true;
+    await context.route("**/*", async (route) => {
+      const request = route.request();
+      const isKnownStaticRequest = STATIC_RESOURCE_TYPES.has(request.resourceType())
+        && (request.method() === "GET" || request.method() === "HEAD")
+        && allowedStaticUrls.has(request.url());
+      if (isKnownStaticRequest) {
+        await route.continue();
+        return;
+      }
+      await route.abort("blockedbyclient");
+    });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+      origin: previewOrigin,
+    });
+
     await expectViewportContained(page);
     for (const name of [
       "Previous chapter",
@@ -112,7 +167,18 @@ for (const viewport of [
     }).click());
 
     await page.getByRole("button", { name: "Chapter index" }).click();
-    await expectPreviewGuard(page, () => page.getByTestId("chapter-index-dropdown")
+    const chapterIndex = page.getByTestId("chapter-index-dropdown");
+    await expect(chapterIndex).toBeVisible();
+    if (viewport.name === "mobile") {
+      const headerBox = await page.locator("header").first().boundingBox();
+      const indexBox = await chapterIndex.boundingBox();
+      expect(headerBox).not.toBeNull();
+      expect(indexBox).not.toBeNull();
+      expect(indexBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    }
+    await expectViewportContained(page);
+    await captureVisualQa(page, testInfo.outputPath(`${viewport.name}-chapter-index.png`));
+    await expectPreviewGuard(page, () => chapterIndex
       .getByRole("button", { name: /^24/iu })
       .click());
 
@@ -166,19 +232,26 @@ for (const viewport of [
 
     const sourceScroller = page.getByTestId("chapter-source-scroller");
     const englishScroller = page.getByTestId("chapter-english-scroller");
-    const hasScrollablePanes = await sourceScroller.evaluate((element) => (
-      element.scrollHeight > element.clientHeight
-    ));
-    if (hasScrollablePanes) {
+    const comparisonLayout = sourceScroller.locator("../..");
+    if (viewport.name === "desktop") {
+      expect(await sourceScroller.evaluate((element) => (
+        element.scrollHeight - element.clientHeight
+      ))).toBeGreaterThan(0);
       await sourceScroller.evaluate((element) => {
         element.scrollTop = (element.scrollHeight - element.clientHeight) / 2;
         element.dispatchEvent(new Event("scroll", { bubbles: true }));
       });
       await expect.poll(() => englishScroller.evaluate((element) => element.scrollTop))
         .toBeGreaterThan(0);
+    } else {
+      expect(await comparisonLayout.evaluate((element) => (
+        element.scrollHeight - element.clientHeight
+      ))).toBeGreaterThan(0);
     }
 
-    const firstWarningIcon = page.getByRole("button", { name: /warnings$/iu }).first();
+    const firstWarningIcon = page.getByRole("button", {
+      name: "Glossary mismatch warnings",
+    });
     await firstWarningIcon.click();
     const qaSidebar = page.getByTestId("qa-sidebar");
     await expect(qaSidebar).toHaveAttribute("data-expanded", "true");
@@ -187,9 +260,27 @@ for (const viewport of [
       .first()).toBeVisible();
     await expectViewportContained(page);
     await captureVisualQa(page, testInfo.outputPath(`${viewport.name}-qa-navigation.png`));
-    const nextOccurrence = qaSidebar.getByRole("button", { name: /^Next .+ occurrence$/iu }).first();
-    if (await nextOccurrence.count()) {
-      await nextOccurrence.click();
+    const selectedGlossaryWarning = page.locator('[data-testid^="qa-warning-glossary_mismatch"]');
+    const nextOccurrence = selectedGlossaryWarning.getByRole("button", {
+      name: "Next Glossary mismatch occurrence",
+    });
+    const occurrenceCounter = selectedGlossaryWarning.locator('[aria-live="polite"]');
+    const initialCounter = await occurrenceCounter.textContent();
+    const occurrenceTotal = Number(initialCounter?.split("/")[1]);
+    expect(occurrenceTotal).toBeGreaterThan(1);
+    await Promise.all([sourceScroller, englishScroller, comparisonLayout].map((locator) => (
+      locator.evaluate((element) => { element.scrollTop = 0; })
+    )));
+    await nextOccurrence.click();
+    await expect(occurrenceCounter).toHaveText(`2/${occurrenceTotal}`);
+    if (viewport.name === "desktop") {
+      await expect.poll(() => englishScroller.evaluate((element) => element.scrollTop))
+        .toBeGreaterThan(0);
+      await expect.poll(() => sourceScroller.evaluate((element) => element.scrollTop))
+        .toBeGreaterThan(0);
+    } else {
+      await expect.poll(() => comparisonLayout.evaluate((element) => element.scrollTop))
+        .toBeGreaterThan(0);
     }
 
     await title.dispatchEvent("mousedown");
@@ -198,10 +289,13 @@ for (const viewport of [
     const glossaryHighlight = page.locator(
       'button:has(mark[data-testid^="glossary-highlight-"])',
     ).first();
-    if (await glossaryHighlight.count()) {
-      await glossaryHighlight.click();
-      await expect(page.getByRole("status")).toHaveText("Term copied to clipboard");
-    }
+    await expect(glossaryHighlight).toBeVisible();
+    const copiedTerm = await glossaryHighlight.locator("mark").textContent();
+    expect(copiedTerm).toBeTruthy();
+    await glossaryHighlight.click();
+    await expect(page.getByRole("status")).toHaveText("Term copied to clipboard");
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText()))
+      .toBe(copiedTerm);
 
     if (await qaSidebar.getAttribute("data-expanded") !== "true") {
       await firstWarningIcon.click();
@@ -224,7 +318,7 @@ for (const viewport of [
     const promptValues = await Promise.all(["Prompt 1", "Prompt 2", "Prompt 3"].map(
       (name) => retryDialog.getByRole("textbox", { name }).inputValue(),
     ));
-    expect(promptValues.every((value) => value === PREVIEW_PROMPT)).toBe(true);
+    promptValues.forEach(expectPromptContract);
     await retryDialog.getByRole("textbox", { name: "Prompt 2" })
       .fill("Local synthetic prompt edit");
     await expect(retryDialog.getByRole("textbox", { name: "Prompt 2" }))
@@ -256,6 +350,7 @@ for (const viewport of [
     await expectPreviewGuard(page, () => reviewer.locator("..").dispatchEvent("mousedown"));
 
     await page.reload();
+    await page.waitForLoadState("networkidle");
     const resetTitle = await page.getByRole("textbox", { name: "English title" }).inputValue();
     const resetFirstTranslation = await page.getByRole("textbox", {
       name: "Translation 1",
@@ -265,6 +360,7 @@ for (const viewport of [
     expect(resetFirstTranslation === originalFirstTranslation).toBe(true);
     await expectViewportContained(page);
 
-    expect(applicationRequests).toEqual([]);
+    expect(trafficViolations).toEqual([]);
+    expect(websocketViolations).toEqual([]);
   });
 }
