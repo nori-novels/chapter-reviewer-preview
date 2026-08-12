@@ -281,6 +281,13 @@
   transform: translateX(-50%) translateY(0);
 }
 
+.iconButton[aria-pressed="true"] .iconTip,
+.iconButton[aria-pressed="true"]:not(:disabled):hover .iconTip,
+.iconButton[aria-pressed="true"]:not(:disabled):focus-visible .iconTip {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-3px);
+}
+
 .loading {
   display: grid;
   min-height: 360px;
@@ -1135,12 +1142,56 @@
 
 @media (max-width: 620px) {
   .header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
     padding: 13px;
   }
 
   .headingGroup h2 {
-    max-width: 52vw;
+    max-width: none;
     font-size: 16px;
+  }
+
+  .chapterNav {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .chapterNav .iconTip {
+    right: -8px;
+    left: auto;
+    transform: none;
+  }
+
+  .chapterNav .iconButton:not(:disabled):hover .iconTip,
+  .chapterNav .iconButton:not(:disabled):focus-visible .iconTip {
+    transform: none;
+  }
+
+  .headerActions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .headerActions .iconTip {
+    right: -8px;
+    left: auto;
+    transform: none;
+  }
+
+  .headerActions .iconButton:not(:disabled):hover .iconTip,
+  .headerActions .iconButton:not(:disabled):focus-visible .iconTip {
+    transform: none;
+  }
+
+  .headerActions .iconButton[aria-pressed="true"] .iconTip,
+  .headerActions .iconButton[aria-pressed="true"]:not(:disabled):hover .iconTip,
+  .headerActions .iconButton[aria-pressed="true"]:not(:disabled):focus-visible .iconTip {
+    transform: none;
   }
 
   .comparisonHeader > div,
@@ -1276,6 +1327,16 @@
 .findIconButton:disabled {
   opacity: .4;
   cursor: default;
+}
+
+@media (max-width: 620px) {
+  .findPanel {
+    top: 112px;
+    right: 13px;
+    left: 13px;
+    width: auto;
+    max-width: none;
+  }
 }
 
 /* Find-match highlighting: a mirror layer behind each transparent-background
