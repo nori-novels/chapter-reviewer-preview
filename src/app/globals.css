@@ -1,0 +1,92 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  scrollbar-color: rgba(20, 20, 20, 0.34) transparent;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.34);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: "Figtree", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  --bg: #ffffff;
+  --text: #141414;
+  --muted: #8a8a8a;
+  --faint: #b8b8b8;
+  --line: rgba(20, 20, 20, 0.12);
+  --card: #f6f5f1;
+  --card2: #efeee9;
+  --accent: #de5643;
+  --review: #4a6fa5;
+  --field: rgba(20, 20, 20, 0.18);
+  --fieldFocusRing: 2px solid var(--text);
+  --fieldFocusOffset: 3px;
+  --fieldFocusOffsetTight: 2px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

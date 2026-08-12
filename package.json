@@ -1,0 +1,35 @@
+{
+  "name": "chapter-reviewer-preview",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "npx serve out",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "scan:public": "node scripts/scan-public-build.mjs"
+  },
+  "dependencies": {
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.3",
+    "@types/node": "20.19.9",
+    "@types/react": "19.1.9",
+    "@types/react-dom": "19.1.7",
+    "eslint": "9.32.0",
+    "eslint-config-next": "16.2.10",
+    "jsdom": "29.1.1",
+    "serve": "14.2.4",
+    "typescript": "5.9.2",
+    "vitest": "4.1.10"
+  }
+}
