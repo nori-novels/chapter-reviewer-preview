@@ -1,0 +1,1406 @@
+.overlay {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: grid;
+  place-items: stretch;
+  background: var(--bg);
+}
+
+.dialog {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  min-height: 100vh;
+  flex-direction: column;
+  overflow: hidden;
+  outline: none;
+  background: var(--bg);
+}
+
+.dialog:focus-visible {
+  box-shadow: inset 0 0 0 3px rgba(222, 86, 67, .22);
+}
+
+.header {
+  position: relative;
+  /* Keep the header (and the index dropdown it hosts, which .chapterNav's
+     transform traps in a stacking context) above the panes, whose textareas
+     carry z-index:1 for the find backdrop. */
+  z-index: 2;
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  padding: 17px 20px;
+}
+
+.chapterNav {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translate(-50%, -50%);
+}
+
+/* On narrow viewports the centered cluster would overlap the heading and
+   action buttons, so it falls back to normal flex flow. */
+@media (max-width: 1100px) {
+  .chapterNav {
+    position: static;
+    transform: none;
+  }
+}
+
+.headingGroup {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.headingTitleRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.chapterNumber,
+.qaEyebrow {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.headingGroup h2 {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerMeta {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+.statusCluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.headerTlNote {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusBadge {
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.statusBadge {
+  background: var(--card2);
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.headerActions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.iconButton {
+  position: relative;
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  transition: background .12s;
+}
+
+/* Same 34px hover box as its neighbours; only the tone is quieter, since
+   dismissal is the least interesting action in the header. */
+.closeButton { color: var(--muted); }
+
+.iconButton:hover:not(:disabled),
+.iconButton[aria-pressed="true"]:not(:disabled) {
+  background: var(--card);
+  color: var(--text);
+}
+
+.iconButton:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(222, 86, 67, .14);
+}
+
+.indexWrap {
+  position: relative;
+}
+
+.indexDropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  width: 320px;
+  max-height: 380px;
+  flex-direction: column;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px;
+  background: var(--bg);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .16);
+  animation: indexMenuIn .16s ease;
+}
+
+@keyframes indexMenuIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.indexRow {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 4px;
+  outline: none;
+  padding: 9px 11px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background .12s ease;
+}
+
+.indexRow:hover {
+  background: var(--card);
+}
+
+.indexRow:focus-visible {
+  outline: 2px solid #3f3f46;
+  outline-offset: -2px;
+}
+
+.indexRowCurrent {
+  background: var(--card2);
+}
+
+.indexRowApproved > * {
+  opacity: .45;
+}
+
+.indexNum {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.indexTitle {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Row markers live in chapterIndexMarkers.module.css, shared with the import
+   tab's chapter index dialog. */
+
+.iconButton:disabled {
+  opacity: .32;
+  cursor: default;
+}
+
+/* Same tooltip treatment as the glossary category segments. */
+.iconTip {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 5px);
+  left: 50%;
+  border-radius: 4px;
+  padding: 12px 13px;
+  background: #1e1e21;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: .05em;
+  opacity: 0;
+  pointer-events: none;
+  text-transform: none;
+  transform: translateX(-50%) translateY(-3px);
+  transition: opacity .18s ease, transform .18s ease;
+  white-space: nowrap;
+}
+
+.iconButton:not(:disabled):hover .iconTip,
+.iconButton:not(:disabled):focus-visible .iconTip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.iconButton[aria-pressed="true"] .iconTip,
+.iconButton[aria-pressed="true"]:not(:disabled):hover .iconTip,
+.iconButton[aria-pressed="true"]:not(:disabled):focus-visible .iconTip {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-3px);
+}
+
+.loading {
+  display: grid;
+  min-height: 360px;
+  flex: 1;
+  place-items: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.placeholderNotice {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 20px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.placeholderNotice strong {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.main {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: row;
+  border-bottom: 1px solid var(--line);
+}
+
+.comparison {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.toggleButton {
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  outline: none;
+  padding: 0 13px;
+  background: #f4f3ef;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  transition: background .12s, color .12s;
+}
+
+.toggleButton[aria-pressed="true"] {
+  background: #3f3f46;
+  color: #fff;
+}
+
+.toggleButton:hover:not(:disabled) { background: #edece8; color: var(--text); }
+.toggleButton[aria-pressed="true"]:hover:not(:disabled) { background: #3f3f46; color: #fff; }
+
+.toggleButton:focus-visible {
+  outline: 2px solid #3f3f46;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.glossaryHighlightWrap:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(222, 86, 67, .16);
+}
+
+.toggleButton:disabled {
+  opacity: .42;
+  cursor: default;
+}
+
+.paneHeader {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.paneHeader h3,
+.qaHeading h3 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.paneHeader span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.sourceTitle {
+  flex: none;
+  margin-bottom: 9px;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Unaligned prose. The pane scroller owns the scrolling and the surface, so
+   the text sits flat on it exactly like the aligned rows do, and one shared
+   inset wrapper keeps the two columns starting on the same line. */
+.proseColumn {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  padding: 16px 18px;
+}
+
+.sourceBody {
+  font-family: ui-serif, Georgia, serif;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.missingSourcePanel {
+  display: grid;
+  min-height: 120px;
+  flex: 1;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+  padding: 20px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.comparisonLayout {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.comparisonHeader {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.comparisonHeader > div {
+  min-width: 0;
+  padding: 14px 18px 12px;
+}
+
+.comparisonHeader > div + div {
+  border-left: 1px solid var(--line);
+}
+
+.comparisonPanes {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border-top: 1px solid var(--line);
+}
+
+.paneScroller {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: #fdfcf9;
+  /* Thumb-only scrollbar styling is global (globals.css); only the reserved
+     gutter is specific to these mirrored panes. */
+  scrollbar-gutter: stable both-edges;
+}
+
+.paneScroller + .paneScroller {
+  border-left: 1px solid var(--line);
+}
+
+.missingSourceRows { padding: 12px 18px; }
+
+.alignedSource,
+.alignedEnglish {
+  margin: 6px 8px;
+  border-radius: 10px;
+  padding: 10px;
+  transition: background .15s ease;
+}
+
+.alignedSource {
+  min-width: 0;
+  font-family: ui-serif, Georgia, serif;
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.alignedEnglish {
+  display: block;
+  min-width: 0;
+  background: transparent;
+}
+
+.alignedSource:hover,
+.alignedSource:focus-within,
+.alignedEnglish:hover,
+.alignedEnglish:focus-within {
+  background: rgba(94, 113, 86, .14);
+}
+
+.paragraphLabel {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-family: "Figtree", system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.tlNoteLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+/* The flex row owns the spacing below the label, so reset the label's own margin. */
+.tlNoteLabelRow .paragraphLabel {
+  margin-bottom: 0;
+}
+
+.tlDeleteButton {
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  padding: 2px 7px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: "Figtree", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  line-height: 1.3;
+  transition: background .12s, color .12s;
+}
+
+.tlDeleteButton:hover:not(:disabled),
+.tlDeleteButton:focus-visible {
+  background: rgba(222, 86, 67, .1);
+  color: var(--accent);
+}
+
+.tlDeleteButton:focus-visible {
+  outline: 2px solid #3f3f46;
+  outline-offset: 1px;
+}
+
+.tlDeleteButton:disabled {
+  opacity: .42;
+  cursor: default;
+}
+
+.paragraphContent {
+  min-height: 42px;
+}
+
+.alignedInput {
+  field-sizing: content;
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  padding: 0;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.alignedInput:disabled {
+  color: var(--muted);
+}
+
+.glossaryHighlightWrap {
+  position: relative;
+  display: inline-block;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.glossaryHighlight {
+  position: relative;
+  border-radius: 0;
+  padding: 1px 2px;
+  background: #f4c6bd;
+  color: #7f1d10;
+  font: inherit;
+}
+
+.glossaryHighlight::after {
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  content: "";
+  pointer-events: none;
+}
+
+.glossaryTooltip {
+  position: fixed;
+  z-index: 5;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 16px));
+  border-radius: 4px;
+  padding: 12px 13px;
+  background: #1e1e21;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: .05em;
+  line-height: 1.35;
+  pointer-events: none;
+  white-space: normal;
+  animation: tooltipEnter .18s ease both;
+}
+
+@keyframes tooltipEnter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.field {
+  display: flex;
+  min-height: 0;
+  flex: none;
+  flex-direction: column;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--field);
+  border-radius: 8px;
+  outline: none;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.input:focus-visible {
+  border-color: var(--text);
+  box-shadow: none;
+  outline: var(--fieldFocusRing);
+  outline-offset: var(--fieldFocusOffset);
+}
+
+/* Same treatment as .alignedInput: the prose column is a bare field on the
+   pane surface, and it grows with its content so the pane scroller - not the
+   textarea - does the scrolling. A focus ring here would read as a second
+   modal border at full modal height, so there is none. */
+/* The field stretches to its column even when the chapter is short, so a click
+   anywhere in the pane puts the caret in the text. */
+.bodyFieldWrap {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.bodyInput {
+  field-sizing: content;
+  width: 100%;
+  min-height: 42px;
+  flex: 1 1 auto;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  padding: 0;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.input:disabled {
+  background: var(--card);
+  color: var(--muted);
+}
+
+.bodyInput:disabled {
+  color: var(--muted);
+}
+
+.qaSidebar {
+  position: relative;
+  display: flex;
+  width: 56px;
+  min-height: 0;
+  flex: none;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--line);
+  background: #fdfcf9;
+  transition: width .3s cubic-bezier(.25, .1, .25, 1);
+}
+
+.qaSidebar[data-expanded="true"] {
+  width: 320px;
+}
+
+.qaSidebarIcons {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: 56px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0;
+  opacity: 1;
+  transition: opacity .16s ease;
+}
+
+.qaSidebar[data-expanded="true"] .qaSidebarIcons {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.qaIconBox {
+  position: relative;
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  outline: none;
+  background: #f4f3ef;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  transition: background .12s, color .12s;
+}
+
+.qaIconBox:hover:not(:disabled) {
+  background: #edece8;
+  color: var(--text);
+}
+
+.qaIconBox:focus-visible {
+  outline: 2px solid #3f3f46;
+  outline-offset: 2px;
+}
+
+.qaIconClean {
+  color: #5e7156;
+  cursor: default;
+}
+
+.qaIconGlyph {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.qaIconCount {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: inline-flex;
+  min-width: 15px;
+  height: 15px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.qaSidebarPanel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: 320px;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease .06s;
+}
+
+.qaSidebar[data-expanded="true"] .qaSidebarPanel {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.qaSidebarHeading {
+  flex: none;
+  padding: 14px 16px 10px;
+}
+
+.qaSidebarHeading h3 {
+  margin-top: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.qaWarningList {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: auto;
+  padding: 2px 16px 12px;
+}
+
+.qaWarningCard {
+  position: relative;
+  flex: none;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  transition: background .12s, border-color .12s;
+}
+
+.qaWarningCard + .qaWarningCard {
+  margin-top: -1px;
+}
+
+.qaWarningCard:first-of-type {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.qaWarningCard:last-of-type {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.qaWarningCardSelected {
+  z-index: 1;
+  border-color: rgba(222, 86, 67, .35);
+  background: rgba(222, 86, 67, .07);
+}
+
+/* Straight full-height selection indicator; intentionally squared off even
+   where the first/last card border curves. */
+.qaWarningCardSelected::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: -1px;
+  width: 4px;
+  background: var(--accent);
+}
+
+.qaWarningBody {
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: none;
+  padding: 9px 11px 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.qaWarningBody:focus-visible {
+  outline: 2px solid #3f3f46;
+  outline-offset: -2px;
+}
+
+.qaWarningType {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.qaWarningDetail {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.qaWarningDetail small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.qaWarningParagraphs {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.qaOccurrenceNav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.qaOccurrenceButton {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 5px;
+  outline: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+
+.qaOccurrenceButton:hover:not(:disabled) {
+  background: var(--card);
+  color: var(--text);
+}
+
+.qaOccurrenceButton:focus-visible {
+  outline: 2px solid #3f3f46;
+  outline-offset: 1px;
+}
+
+.qaPipelineNotice {
+  flex: none;
+  margin-top: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.qaSidebarFooter {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding: 12px 16px;
+}
+
+.qaFooterButton {
+  display: inline-flex;
+  min-height: 34px;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  outline: none;
+  padding: 0 13px;
+  background: #3d3c39;
+  color: var(--bg);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  transition: background .12s;
+}
+
+.qaFooterButton:hover:not(:disabled) {
+  background: #2c2b28;
+}
+
+.qaFooterButton:focus-visible {
+  outline: 2px solid #3f3f46;
+  outline-offset: 2px;
+}
+
+.qaFooterButton:disabled,
+.qaIconBox:disabled,
+.qaWarningBody:disabled,
+.qaOccurrenceButton:disabled {
+  cursor: default;
+  opacity: .5;
+}
+
+.warningTargetRow,
+.warningTargetRow:hover,
+.warningTargetRow:focus-within {
+  background: rgba(222, 86, 67, .12);
+}
+
+.warningTargetField {
+  border-color: rgba(222, 86, 67, .55);
+  background: rgba(222, 86, 67, .07);
+}
+
+.noFindings {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 20px;
+}
+
+.footerLeft,
+.footerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.failedNotice {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.failedNotice strong {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .main {
+    position: relative;
+  }
+
+  .qaSidebar[data-expanded="true"] {
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(320px, 86vw);
+    box-shadow: 18px 0 40px rgba(0, 0, 0, .12);
+  }
+
+  .comparisonLayout {
+    overflow-y: auto;
+  }
+
+  .comparisonHeader {
+    display: block;
+  }
+
+  .comparisonHeader > div + div {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .comparisonPanes {
+    display: block;
+    flex: none;
+  }
+
+  .paneScroller {
+    overflow: visible;
+  }
+
+  .paneScroller + .paneScroller {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  /* Stacked panes have no height of their own to fill, so the unaligned
+     columns keep a usable minimum. */
+  .sourceBody,
+  .bodyInput {
+    min-height: 42vh;
+  }
+}
+
+@media (max-width: 620px) {
+  .header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 13px;
+  }
+
+  .headingGroup h2 {
+    max-width: none;
+    font-size: 16px;
+  }
+
+  .chapterNav {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .chapterNav .iconTip {
+    right: -8px;
+    left: auto;
+    transform: none;
+  }
+
+  .chapterNav .iconButton:not(:disabled):hover .iconTip,
+  .chapterNav .iconButton:not(:disabled):focus-visible .iconTip {
+    transform: none;
+  }
+
+  .chapterNav .indexDropdown {
+    position: fixed;
+    top: 112px;
+    right: 13px;
+    left: auto;
+    width: min(320px, calc(100vw - 26px));
+    max-width: calc(100vw - 26px);
+    animation: none;
+    transform: none;
+  }
+
+  .headerActions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .headerActions .iconTip {
+    right: -8px;
+    left: auto;
+    transform: none;
+  }
+
+  .headerActions .iconButton:not(:disabled):hover .iconTip,
+  .headerActions .iconButton:not(:disabled):focus-visible .iconTip {
+    transform: none;
+  }
+
+  .headerActions .iconButton[aria-pressed="true"] .iconTip,
+  .headerActions .iconButton[aria-pressed="true"]:not(:disabled):hover .iconTip,
+  .headerActions .iconButton[aria-pressed="true"]:not(:disabled):focus-visible .iconTip {
+    transform: none;
+  }
+
+  .comparisonHeader > div,
+  .proseColumn,
+  .footer {
+    padding-right: 13px;
+    padding-left: 13px;
+  }
+
+  .footer {
+    flex-wrap: wrap;
+  }
+
+  .footerRight {
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .footerRight > button {
+    width: 100%;
+  }
+}
+
+.findPanel {
+  position: absolute;
+  top: 64px;
+  right: 20px;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 460px;
+  max-width: calc(100% - 40px);
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .16);
+}
+
+.findControls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Fields match the glossary table's borderless resting tint. */
+.findInput {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  outline: none;
+  background: rgba(0, 0, 0, .05);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.findInput::placeholder {
+  color: var(--muted);
+}
+
+.findInput:focus-visible {
+  border-color: var(--text);
+  outline: var(--fieldFocusRing);
+  outline-offset: var(--fieldFocusOffset);
+}
+
+.findToggle {
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+
+.findToggle:hover:not(:disabled),
+.findToggle[aria-pressed="true"] {
+  background: var(--card2);
+  color: var(--text);
+}
+
+.findCounter {
+  min-width: 56px;
+  margin: 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.findIconButton {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  outline: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+
+.findIconButton:hover:not(:disabled) {
+  background: var(--card2);
+  color: var(--text);
+}
+
+.findIconButton:focus-visible {
+  box-shadow: 0 0 0 3px rgba(222, 86, 67, .14);
+}
+
+/* Panel controls take the same typeface and size as the panel's fields, so
+   Replace reads as a peer of the text beside it rather than a browser button. */
+.findAction {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .12s;
+}
+
+.findAction:hover:not(:disabled) {
+  background: var(--card2);
+}
+
+.findAction:disabled,
+.findToggle:disabled,
+.findIconButton:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+@media (max-width: 620px) {
+  .findPanel {
+    top: 112px;
+    right: 13px;
+    left: 13px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* Find-match highlighting: a mirror layer behind each transparent-background
+   field repeats the field's text (transparent) so the marks line up with the
+   characters in the textarea above. */
+.findFieldWrap {
+  position: relative;
+  width: 100%;
+}
+
+.findFieldWrap > textarea {
+  position: relative;
+  z-index: 1;
+}
+
+.findBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: transparent;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Non-selected matches read as light orange; the selected match (below) is
+   the brighter yellow so the reviewer can tell which one Replace acts on. */
+.findMatchMark {
+  border-radius: 0;
+  background: #ffc078;
+  color: transparent;
+  border-bottom: 2px solid #ff9f43;
+}
+
+.findMatchMarkCurrent {
+  border-radius: 0;
+  background: #ffdf4a;
+  color: transparent;
+  border-bottom: 2px solid #ff9f43;
+}
