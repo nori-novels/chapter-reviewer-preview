@@ -1,0 +1,44 @@
+/* Marker cluster shared by the reviewer's index dropdown and the import tab's
+   chapter index dialog. Fixed slot widths keep the columns aligned down the
+   list; empty slots still occupy their column. */
+.markers {
+  display: grid;
+  flex: none;
+  /* The status column is sized for the longest label, NEEDS OVERRIDE, on one
+     line; the row title takes whatever is left and ellipsizes. */
+  grid-template-columns: 18px 88px;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.tlNote,
+.override,
+.failed {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tlNote {
+  color: var(--accent);
+  letter-spacing: .08em;
+}
+
+/* Neutral, so FAILED is the only status marker that pulls the eye. */
+.override {
+  color: var(--text);
+  letter-spacing: .06em;
+}
+
+.failed {
+  color: var(--accent);
+  letter-spacing: .06em;
+}

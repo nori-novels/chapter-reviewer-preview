@@ -4,8 +4,9 @@ import Page, { PreviewPage } from "./page";
 it("renders the current preview fixture", () => {
   render(<Page />);
 
-  expect(screen.getByText("Chapter reviewer preview")).toBeInTheDocument();
-  expect(screen.getByText("Obsessed - Chapter 25")).toBeInTheDocument();
+  const dialog = screen.getByRole("dialog");
+  expect(dialog).toBeInTheDocument();
+  expect(screen.getAllByText("Chapter 25")).not.toHaveLength(0);
 });
 
 it("renders a static alert when the fixture is unavailable", () => {
@@ -13,6 +14,6 @@ it("renders a static alert when the fixture is unavailable", () => {
 
   expect(screen.getByRole("alert")).toHaveTextContent("Preview unavailable");
   expect(
-    screen.queryByText("Chapter reviewer preview"),
+    screen.queryByRole("dialog"),
   ).not.toBeInTheDocument();
 });

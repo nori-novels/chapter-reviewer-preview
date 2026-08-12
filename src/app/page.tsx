@@ -2,6 +2,7 @@ import {
   previewFixture,
   type PreviewFixture,
 } from "@/features/preview/fixture";
+import { PreviewChapterReviewer } from "@/features/reviewer/PreviewChapterReviewer";
 
 export function PreviewPage({
   fixture,
@@ -16,14 +17,7 @@ export function PreviewPage({
     );
   }
 
-  return (
-    <main>
-      <h1>Chapter reviewer preview</h1>
-      <p>
-        {fixture.novelTitle} - Chapter {fixture.chapter.ordinal}
-      </p>
-    </main>
-  );
+  return <PreviewChapterReviewer fixture={fixture} />;
 }
 
 export default function Page() {
