@@ -1,6 +1,6 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeAll, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/Toast/Toast";
 import { PREVIEW_UNAVAILABLE_MESSAGE } from "@/features/preview/copy";
 import { previewFixture } from "@/features/preview/fixture";
@@ -12,6 +12,10 @@ if (!previewFixture) {
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
+});
+
+beforeEach(() => {
+  window.sessionStorage.clear();
 });
 
 function renderReviewer() {
@@ -56,6 +60,33 @@ it("guards non-current chapter-index selection", async () => {
   );
 });
 
+it("restores chapter-index focus after keyboard selection", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+  const opener = screen.getByRole("button", { name: "Chapter index" });
+  opener.focus();
+
+  await user.keyboard("{Enter}");
+  await user.tab();
+  expect(screen.getByRole("button", { name: /^24/iu })).toHaveFocus();
+  await user.keyboard("{Enter}");
+
+  await waitFor(() => expect(opener).toHaveFocus());
+});
+
+it("dismisses the chapter index on outside click without stealing focus", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+  await user.click(screen.getByRole("button", { name: "Chapter index" }));
+  const outside = screen.getByRole("button", { name: "Find and replace" });
+  outside.focus();
+
+  fireEvent.mouseDown(outside);
+
+  expect(screen.queryByTestId("chapter-index-dropdown")).toBeNull();
+  expect(outside).toHaveFocus();
+});
+
 it("keeps title and body edits local", async () => {
   const user = userEvent.setup();
   renderReviewer();
@@ -81,6 +112,28 @@ it("opens and closes Find and replace locally", async () => {
 
   await user.click(screen.getByRole("button", { name: "Close find and replace" }));
   expect(screen.queryByRole("dialog", { name: "Find and replace" })).toBeNull();
+});
+
+it("replaces an English-body match locally", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+  await user.click(screen.getByRole("button", { name: "Align paragraphs" }));
+  const body = screen.getByRole("textbox", { name: "English body" });
+  const original = String(body.getAttribute("value") ?? "") || (body as HTMLTextAreaElement).value;
+  const query = original.match(/[A-Za-z]{5,}/u)?.[0];
+  expect(query).toBeDefined();
+
+  await user.click(screen.getByRole("button", { name: "Find and replace" }));
+  const panel = screen.getByRole("dialog", { name: "Find and replace" });
+  await user.type(within(panel).getByRole("textbox", { name: "Find" }), query!);
+  await user.type(
+    within(panel).getByRole("textbox", { name: "Replace with" }),
+    "LOCAL_REPLACEMENT",
+  );
+  await user.click(within(panel).getByRole("button", { name: "Replace all" }));
+
+  expect(body).not.toHaveValue(original);
+  expect((body as HTMLTextAreaElement).value).toContain("LOCAL_REPLACEMENT");
 });
 
 it.each(["Align paragraphs", "Sync scrolling"])(
@@ -118,6 +171,55 @@ it("guards the glossary mutation action", async () => {
 
   await user.click(screen.getAllByRole("button", { name: /warnings$/iu })[0]!);
   await user.click(screen.getByRole("button", { name: "Edit glossary" }));
+
+  expect(screen.getByText(PREVIEW_UNAVAILABLE_MESSAGE)).toHaveAttribute(
+    "data-show",
+    "true",
+  );
+});
+
+it("guards Retranslate with the exact preview toast", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+
+  await user.click(screen.getAllByRole("button", { name: /warnings$/iu })[0]!);
+  await user.click(screen.getByRole("button", { name: "Retranslate" }));
+
+  expect(screen.getByText(PREVIEW_UNAVAILABLE_MESSAGE)).toHaveAttribute(
+    "data-show",
+    "true",
+  );
+});
+
+it("announces guarded actions through a polite status region", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+  expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
+  expect(screen.getByRole("status")).toHaveTextContent(PREVIEW_UNAVAILABLE_MESSAGE);
+});
+
+it("guards Escape at the full-screen reviewer boundary", async () => {
+  const user = userEvent.setup();
+  renderReviewer();
+
+  await user.keyboard("{Escape}");
+
+  expect(screen.getByText(PREVIEW_UNAVAILABLE_MESSAGE)).toHaveAttribute(
+    "data-show",
+    "true",
+  );
+});
+
+it("guards backdrop dismissal at the full-screen reviewer boundary", () => {
+  renderReviewer();
+  const dialog = screen.getByRole("dialog", { name: /Chapter 25/iu });
+  const backdrop = dialog.parentElement;
+  expect(backdrop).not.toBeNull();
+
+  fireEvent.mouseDown(backdrop!);
 
   expect(screen.getByText(PREVIEW_UNAVAILABLE_MESSAGE)).toHaveAttribute(
     "data-show",

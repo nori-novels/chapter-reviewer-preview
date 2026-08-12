@@ -11,7 +11,7 @@ interface ChapterIndexMenuProps {
   open: boolean;
   disabled: boolean;
   onToggle: (opener: HTMLElement) => void;
-  onClose: () => void;
+  onClose: (restoreFocus?: boolean) => void;
   onNavigate: (ordinal: number) => void;
 }
 
@@ -42,7 +42,7 @@ export function ChapterIndexMenu({
     function handleOutside(event: MouseEvent) {
       const target = event.target instanceof Node ? event.target : null;
       if (target && wrapRef.current?.contains(target)) return;
-      onClose();
+      onClose(false);
     }
     document.addEventListener("mousedown", handleOutside, true);
     return () => document.removeEventListener("mousedown", handleOutside, true);
@@ -82,7 +82,7 @@ export function ChapterIndexMenu({
                 type="button"
                 aria-current={current || undefined}
                 onClick={() => {
-                  onClose();
+                  onClose(true);
                   if (!current) onNavigate(chapter.ordinal);
                 }}
               >

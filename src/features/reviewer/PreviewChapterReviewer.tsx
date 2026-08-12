@@ -79,7 +79,6 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
-  const retryOpenerRef = useRef<HTMLElement | null>(null);
   const indexOpenerRef = useRef<HTMLElement | null>(null);
   const findOpenerRef = useRef<HTMLElement | null>(null);
   const findInputRef = useRef<HTMLInputElement | null>(null);
@@ -89,7 +88,6 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   const [privacyRoot, setPrivacyRoot] = useState<HTMLDivElement | null>(null);
   const [indexOpen, setIndexOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const [retryModalOpen, setRetryModalOpen] = useState(false);
   const [selectedWarning, setSelectedWarning] = useState<{
     key: string;
     occurrenceIndex: number;
@@ -126,6 +124,11 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
     setFindOpen(false);
     setFindCurrent(null);
     focusInsideDialog(findOpenerRef.current);
+  }, [focusInsideDialog]);
+
+  const closeIndexMenu = useCallback((restoreFocus = false) => {
+    setIndexOpen(false);
+    if (restoreFocus) focusInsideDialog(indexOpenerRef.current);
   }, [focusInsideDialog]);
 
   useEffect(() => {
@@ -167,8 +170,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
         event.preventDefault();
         event.stopPropagation();
         if (indexOpen) {
-          setIndexOpen(false);
-          focusInsideDialog(indexOpenerRef.current);
+          closeIndexMenu(true);
         } else if (findOpenRef.current) {
           closeFindPanel();
         } else {
@@ -180,7 +182,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
     }
     document.addEventListener("keydown", handleKey, true);
     return () => document.removeEventListener("keydown", handleKey, true);
-  }, [closeFindPanel, focusInsideDialog, indexOpen, showPreviewUnavailable]);
+  }, [closeFindPanel, closeIndexMenu, indexOpen, showPreviewUnavailable]);
 
   function togglePreference(key: keyof ComparisonPreferences) {
     setPreferences((current) => {
@@ -251,7 +253,6 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        data-retry-modal-open={retryModalOpen ? "true" : "false"}
       >
         <header className={styles.header}>
           <div className={styles.headingGroup}>
@@ -285,7 +286,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
                 indexOpenerRef.current = opener;
                 setIndexOpen((current) => !current);
               }}
-              onClose={() => setIndexOpen(false)}
+              onClose={closeIndexMenu}
               onNavigate={showPreviewUnavailable}
             />
             <button
@@ -365,10 +366,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
             onExpand={() => setSidebarExpanded(true)}
             onCollapse={() => setSidebarExpanded(false)}
             onSelectWarning={handleSelectWarning}
-            onRetranslate={(opener) => {
-              retryOpenerRef.current = opener;
-              setRetryModalOpen(true);
-            }}
+            onRetranslate={showPreviewUnavailable}
             onOpenGlossary={showPreviewUnavailable}
           />
           <ChapterComparison
