@@ -26,6 +26,16 @@ function renderReviewer() {
   );
 }
 
+async function openRetryModal() {
+  const user = userEvent.setup();
+  const reviewerDialog = screen.getByRole("dialog", { name: /Chapter 25/iu });
+  await user.click(screen.getAllByRole("button", { name: /warnings$/iu })[0]!);
+  const opener = screen.getByRole("button", { name: "Retranslate" });
+  await user.click(opener);
+  const retryDialog = screen.getByRole("dialog", { name: /Revise chapter 25/iu });
+  return { user, reviewerDialog, retryDialog, opener };
+}
+
 async function expectPreviewGuard(name: string) {
   const user = userEvent.setup();
   renderReviewer();
@@ -178,20 +188,40 @@ it("guards the glossary mutation action", async () => {
   );
 });
 
-it("opens Retranslate locally and restores opener focus after closing", async () => {
-  const user = userEvent.setup();
+it("makes the reviewer inert and hidden while Retranslate is active", async () => {
   renderReviewer();
+  const { reviewerDialog, retryDialog } = await openRetryModal();
 
-  await user.click(screen.getAllByRole("button", { name: /warnings$/iu })[0]!);
-  const opener = screen.getByRole("button", { name: "Retranslate" });
-  await user.click(opener);
-
-  expect(screen.getByRole("dialog", { name: /Revise chapter 25/iu })).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "Cancel" }));
-
-  expect(screen.queryByRole("dialog", { name: /Revise chapter 25/iu })).toBeNull();
-  await waitFor(() => expect(opener).toHaveFocus());
+  expect(reviewerDialog).toHaveAttribute("aria-hidden", "true");
+  expect(reviewerDialog).toHaveAttribute("inert");
+  expect(reviewerDialog).not.toContainElement(retryDialog);
+  expect(screen.getAllByRole("dialog")).toEqual([retryDialog]);
+  expect(retryDialog).toHaveAttribute("aria-modal", "true");
 });
+
+it.each(["Cancel", "Close retry", "Escape", "backdrop"] as const)(
+  "closes Retranslate via %s and restores reviewer semantics and opener focus",
+  async (action) => {
+    renderReviewer();
+    const { user, reviewerDialog, retryDialog, opener } = await openRetryModal();
+
+    if (action === "Escape") {
+      await user.keyboard("{Escape}");
+    } else if (action === "backdrop") {
+      const backdrop = retryDialog.parentElement;
+      expect(backdrop).not.toBeNull();
+      fireEvent.mouseDown(backdrop!);
+    } else {
+      await user.click(screen.getByRole("button", { name: action }));
+    }
+
+    expect(screen.queryByRole("dialog", { name: /Revise chapter 25/iu })).toBeNull();
+    expect(reviewerDialog).not.toHaveAttribute("aria-hidden");
+    expect(reviewerDialog).not.toHaveAttribute("inert");
+    expect(screen.getByRole("dialog", { name: /Chapter 25/iu })).toBe(reviewerDialog);
+    await waitFor(() => expect(opener).toHaveFocus());
+  },
+);
 
 it("announces guarded actions through a polite status region", async () => {
   const user = userEvent.setup();

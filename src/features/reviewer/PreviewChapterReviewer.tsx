@@ -262,6 +262,8 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-hidden={retryOpen || undefined}
+        inert={retryOpen || undefined}
         tabIndex={-1}
       >
         <header className={styles.header}>
@@ -431,15 +433,15 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
           />
         )}
 
-        {retryOpen && (
-          <PreviewRetryModal
-            ordinal={fixture.chapter.ordinal}
-            glossary={fixture.chapter.relevantGlossary}
-            onClose={closeRetryModal}
-            onSubmit={showPreviewUnavailable}
-          />
-        )}
       </div>
+      {retryOpen && (
+        <PreviewRetryModal
+          ordinal={fixture.chapter.ordinal}
+          glossary={fixture.chapter.relevantGlossary}
+          onClose={closeRetryModal}
+          onSubmit={showPreviewUnavailable}
+        />
+      )}
     </div>
   );
 }

@@ -83,19 +83,60 @@ it("keeps the modal open and guards submission", async () => {
   );
 });
 
-it("keeps prompt and glossary edits in local component state", async () => {
+it("keeps edits to all three prompts in local component state", async () => {
   const user = userEvent.setup();
-  renderRetryModal(SYNTHETIC_GLOSSARY);
+  renderRetryModal();
 
-  const prompt = screen.getByRole("textbox", { name: "Prompt 1" });
-  await user.clear(prompt);
-  await user.type(prompt, "Local prompt edit");
-  expect(prompt).toHaveValue("Local prompt edit");
+  for (const [index, label] of ["Prompt 1", "Prompt 2", "Prompt 3"].entries()) {
+    const prompt = screen.getByRole("textbox", { name: label });
+    const value = `Local prompt edit ${index + 1}`;
+    await user.clear(prompt);
+    await user.type(prompt, value);
+    expect(prompt).toHaveValue(value);
+  }
+});
+
+it("keeps every glossary edit local without mutating the glossary prop", async () => {
+  const user = userEvent.setup();
+  const glossary = SYNTHETIC_GLOSSARY.map((entry) => ({
+    ...entry,
+    acceptedTargets: [...entry.acceptedTargets],
+  }));
+  const originalGlossary = JSON.parse(JSON.stringify(glossary)) as GlossaryEntry[];
+  renderRetryModal(glossary);
 
   const target = screen.getByRole("textbox", { name: "Canonical target for Synthetic source" });
   await user.clear(target);
-  await user.type(target, "Local glossary edit");
-  expect(target).toHaveValue("Local glossary edit");
+  await user.type(target, "Local target edit");
+  expect(target).toHaveValue("Local target edit");
+
+  const accepted = screen.getByRole("textbox", { name: "Accepted targets for Synthetic source" });
+  await user.clear(accepted);
+  await user.type(accepted, "Local accepted edit");
+  expect(accepted).toHaveValue("Local accepted edit");
+
+  const gender = screen.getByRole("combobox", { name: "Gender for Synthetic source" });
+  await user.selectOptions(gender, "female");
+  expect(gender).toHaveValue("female");
+
+  const kind = screen.getByRole("combobox", { name: "Kind for Synthetic source" });
+  await user.selectOptions(kind, "term");
+  expect(kind).toHaveValue("term");
+
+  const note = screen.getByRole("textbox", { name: "Note for Synthetic source" });
+  await user.clear(note);
+  await user.type(note, "Local note edit");
+  expect(note).toHaveValue("Local note edit");
+
+  const enabledRow = screen.getByRole("row", {
+    name: "Toggle enabled state for Synthetic source. Currently enabled.",
+  });
+  await user.click(enabledRow);
+  expect(screen.getByRole("row", {
+    name: "Toggle enabled state for Synthetic source. Currently disabled.",
+  })).toBeVisible();
+
+  expect(glossary).toEqual(originalGlossary);
 });
 
 it.each(["Close retry", "Cancel"])("calls onClose from %s", async (name) => {
@@ -136,7 +177,7 @@ it("calls onClose from Escape and the backdrop", async () => {
   expect(onClose).toHaveBeenCalledTimes(2);
 });
 
-it("focuses the dialog and traps Tab within it", async () => {
+it("focuses the dialog and traps forward and reverse Tab within it", async () => {
   const user = userEvent.setup();
   renderRetryModal();
   const dialog = screen.getByRole("dialog", { name: /Revise chapter 25/iu });
@@ -146,5 +187,9 @@ it("focuses the dialog and traps Tab within it", async () => {
   retry.focus();
   await user.tab();
 
-  expect(screen.getByRole("button", { name: "Close retry" })).toHaveFocus();
+  const close = screen.getByRole("button", { name: "Close retry" });
+  expect(close).toHaveFocus();
+  await user.tab({ shift: true });
+
+  expect(retry).toHaveFocus();
 });
