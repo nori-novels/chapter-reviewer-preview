@@ -1,0 +1,352 @@
+.overlay {
+  position: fixed;
+  z-index: 1150;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .56);
+  backdrop-filter: blur(7px);
+}
+
+.dialog {
+  position: relative;
+  display: flex;
+  width: 1180px;
+  max-width: calc(100vw - 48px);
+  min-height: min(640px, calc(100vh - 48px));
+  max-height: calc(100vh - 48px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  outline: none;
+  background: var(--bg);
+  box-shadow: 0 26px 100px rgba(0, 0, 0, .3);
+}
+
+.header {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  padding: 17px 20px;
+}
+
+.eyebrow {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin-top: 4px;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.header p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.iconButton {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  outline: none;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.iconButton:hover:not(:disabled) { background: rgba(0, 0, 0, .08); }
+
+.iconButton:focus-visible {
+  outline: 3px solid rgba(222, 86, 67, .18);
+  outline-offset: 1px;
+}
+
+.iconButton:disabled { opacity: .4; cursor: default; }
+
+.body {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 18px;
+  overflow: auto;
+  padding: 18px 20px;
+}
+
+.prompts {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+/* Fields carry a resting tint instead of a border, matching the glossary
+   review table. */
+.field textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  outline: none;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, .05);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.field textarea:focus-visible {
+  border-color: var(--text);
+  box-shadow: none;
+  outline: var(--fieldFocusRing);
+  outline-offset: var(--fieldFocusOffset);
+}
+
+.field textarea:disabled {
+  background: transparent;
+  color: var(--muted);
+}
+
+.validation {
+  flex: none;
+  border: 1px solid rgba(222, 86, 67, .22);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: rgba(222, 86, 67, .08);
+  color: #8d3529;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.validation ul { margin-top: 5px; }
+
+.glossarySection { flex: 1 1 auto; }
+
+.glossarySection h3 {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.tableWrap { min-height: 0; overflow: auto; }
+.table { width: 100%; min-width: 980px; border-collapse: collapse; table-layout: fixed; }
+
+.table th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 10px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table td { border-bottom: 1px solid var(--line); padding: 8px 10px; vertical-align: top; }
+
+.invalidRow td { background: rgba(222, 86, 67, .07); }
+.invalidRow td:first-child { box-shadow: inset 3px 0 0 rgba(222, 86, 67, .55); }
+
+.table th:nth-child(1) { width: 16%; }
+.table th:nth-child(2) { width: 18%; }
+.table th:nth-child(3) { width: 18%; }
+.table th:nth-child(4) { width: 11%; }
+.table th:nth-child(5) { width: 12%; }
+.table th:nth-child(6) { width: 25%; }
+
+/* In-table fields carry a resting tint instead of a border; disabled rows go
+   flat so the whole row reads as one muted surface. The combobox selector
+   targets GlossarySelect's trigger, which is styled by
+   glossaryReview.module.css and would otherwise keep its border there. */
+.table input,
+.table textarea,
+.table [role="combobox"] {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  outline: none;
+  padding: 7px 9px;
+  background: rgba(0, 0, 0, .05);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.disabledRow input,
+.disabledRow textarea,
+.disabledRow [role="combobox"] {
+  background: transparent;
+}
+
+.table input:not([type="checkbox"]):focus-visible,
+.table textarea:focus-visible {
+  border-color: var(--text);
+  box-shadow: none;
+  outline: var(--fieldFocusRing);
+  outline-offset: var(--fieldFocusOffsetTight);
+}
+
+/* The KIND cell renders GlossarySelect, whose trigger is styled by
+   glossaryReview.module.css and picks up the default 3px offset there. Match
+   the tight offset its neighbouring cells use. `.table [role="combobox"]
+   :focus-visible` is (0,3,0), so it wins over that module's
+   `.selectTrigger:focus-visible` (0,2,0) regardless of stylesheet order. */
+.table [role="combobox"]:focus-visible {
+  outline-offset: var(--fieldFocusOffsetTight);
+}
+
+/* The shared trigger carries a 108px min-width for the wider glossary review
+   table; here the KIND column is narrower, so let it shrink into its cell. */
+.table [role="combobox"] { min-width: 0; }
+
+.table input:disabled,
+.table textarea:disabled,
+.table [role="combobox"]:disabled {
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+}
+
+.table textarea { min-height: 34px; resize: vertical; overflow-y: auto; line-height: 1.4; }
+
+/* The whole row is the enable/disable control, matching the glossary review. */
+.table tbody tr { cursor: pointer; }
+.table tbody tr:hover { background: rgba(0, 0, 0, .035); }
+
+.table tbody tr:focus-visible {
+  outline: 3px solid rgba(222, 86, 67, .28);
+  outline-offset: -3px;
+}
+
+.disabledRow td { opacity: .45; }
+.disabledRow td:focus-within { opacity: 1; }
+
+.sourceToggle {
+  display: inline-block;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  padding: 2px 3px 3px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sourceToggle:hover:not(:disabled),
+.sourceToggle:focus-visible {
+  background: rgba(0, 0, 0, .08);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .42);
+}
+
+.sourceToggle:focus-visible {
+  outline: 3px solid rgba(0, 0, 0, .16);
+  outline-offset: 2px;
+}
+
+.sourceToggle:disabled { cursor: default; }
+
+.emptyTable { padding: 22px; color: var(--muted); font-size: 13px; text-align: center; }
+
+.warning {
+  flex: none;
+  border-top: 1px solid var(--line);
+  padding: 12px 20px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.footer {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .overlay { align-items: stretch; padding: 0; }
+
+  .dialog {
+    width: 100%;
+    max-height: 100vh;
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .prompts { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .header,
+  .body,
+  .warning,
+  .footer {
+    padding-right: 13px;
+    padding-left: 13px;
+  }
+
+  .footer { flex-wrap: wrap; }
+}

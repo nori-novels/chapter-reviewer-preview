@@ -178,17 +178,19 @@ it("guards the glossary mutation action", async () => {
   );
 });
 
-it("guards Retranslate with the exact preview toast", async () => {
+it("opens Retranslate locally and restores opener focus after closing", async () => {
   const user = userEvent.setup();
   renderReviewer();
 
   await user.click(screen.getAllByRole("button", { name: /warnings$/iu })[0]!);
-  await user.click(screen.getByRole("button", { name: "Retranslate" }));
+  const opener = screen.getByRole("button", { name: "Retranslate" });
+  await user.click(opener);
 
-  expect(screen.getByText(PREVIEW_UNAVAILABLE_MESSAGE)).toHaveAttribute(
-    "data-show",
-    "true",
-  );
+  expect(screen.getByRole("dialog", { name: /Revise chapter 25/iu })).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+  expect(screen.queryByRole("dialog", { name: /Revise chapter 25/iu })).toBeNull();
+  await waitFor(() => expect(opener).toHaveFocus());
 });
 
 it("announces guarded actions through a polite status region", async () => {

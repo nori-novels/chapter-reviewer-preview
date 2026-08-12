@@ -20,6 +20,7 @@ import { ChapterIndexMenu } from "./ChapterIndexMenu";
 import { ChapterQaSidebar } from "./ChapterQaSidebar";
 import { ChapterReviewMetadata } from "./ChapterReviewMetadata";
 import { FindReplacePanel, type FindReplaceState } from "./FindReplacePanel";
+import { PreviewRetryModal } from "./PreviewRetryModal";
 import {
   type ComparisonPreferences,
   readComparisonPreferences,
@@ -81,6 +82,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const indexOpenerRef = useRef<HTMLElement | null>(null);
   const findOpenerRef = useRef<HTMLElement | null>(null);
+  const retryOpenerRef = useRef<HTMLElement | null>(null);
   const findInputRef = useRef<HTMLInputElement | null>(null);
   const findOpenRef = useRef(false);
   const [title, setTitle] = useState(fixture.chapter.translatedTitle ?? "");
@@ -104,6 +106,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
     caseSensitive: false,
   });
   const [findCurrent, setFindCurrent] = useState<FindCurrentMatch | null>(null);
+  const [retryOpen, setRetryOpen] = useState(false);
 
   const showPreviewUnavailable: PreviewGuard = useCallback(
     () => show(PREVIEW_UNAVAILABLE_MESSAGE),
@@ -131,6 +134,12 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
     if (restoreFocus) focusInsideDialog(indexOpenerRef.current);
   }, [focusInsideDialog]);
 
+  const closeRetryModal = useCallback(() => {
+    setSidebarExpanded(true);
+    setRetryOpen(false);
+    focusInsideDialog(retryOpenerRef.current);
+  }, [focusInsideDialog]);
+
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       setPreferences(readComparisonPreferences(safelyAcquireSessionStorage(window)));
@@ -149,6 +158,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
+      if (retryOpen) return;
       if (event.metaKey && event.altKey && event.code === "KeyF") {
         event.preventDefault();
         event.stopPropagation();
@@ -182,7 +192,7 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
     }
     document.addEventListener("keydown", handleKey, true);
     return () => document.removeEventListener("keydown", handleKey, true);
-  }, [closeFindPanel, closeIndexMenu, indexOpen, showPreviewUnavailable]);
+  }, [closeFindPanel, closeIndexMenu, indexOpen, retryOpen, showPreviewUnavailable]);
 
   function togglePreference(key: keyof ComparisonPreferences) {
     setPreferences((current) => {
@@ -366,7 +376,10 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
             onExpand={() => setSidebarExpanded(true)}
             onCollapse={() => setSidebarExpanded(false)}
             onSelectWarning={handleSelectWarning}
-            onRetranslate={showPreviewUnavailable}
+            onRetranslate={(opener) => {
+              retryOpenerRef.current = opener;
+              setRetryOpen(true);
+            }}
             onOpenGlossary={showPreviewUnavailable}
           />
           <ChapterComparison
@@ -415,6 +428,15 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
             onNavigate={handleFindNavigate}
             onCurrentMatchChange={setFindCurrent}
             onClose={closeFindPanel}
+          />
+        )}
+
+        {retryOpen && (
+          <PreviewRetryModal
+            ordinal={fixture.chapter.ordinal}
+            glossary={fixture.chapter.relevantGlossary}
+            onClose={closeRetryModal}
+            onSubmit={showPreviewUnavailable}
           />
         )}
       </div>
