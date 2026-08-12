@@ -341,13 +341,18 @@ for (const viewport of [
       name: "Save changes",
     }).click());
     await expectPreviewGuard(page, () => page.getByRole("button", {
-      name: "Approve",
+      name: "Approve with override",
     }).click());
     await expectPreviewGuard(page, () => page.getByRole("button", {
       name: "Close chapter review",
     }).click());
     await expectPreviewGuard(page, () => reviewer.press("Escape"));
     await expectPreviewGuard(page, () => reviewer.locator("..").dispatchEvent("mousedown"));
+
+    await align.click();
+    await sync.click();
+    await expect(align).toHaveAttribute("aria-pressed", "false");
+    await expect(sync).toHaveAttribute("aria-pressed", "false");
 
     await page.reload();
     await page.waitForLoadState("networkidle");
@@ -358,6 +363,10 @@ for (const viewport of [
     }).inputValue();
     expect(resetTitle === originalTitle).toBe(true);
     expect(resetFirstTranslation === originalFirstTranslation).toBe(true);
+    await expect(page.getByRole("button", { name: "Align paragraphs" }))
+      .toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Sync scrolling" }))
+      .toHaveAttribute("aria-pressed", "true");
     await expectViewportContained(page);
 
     expect(trafficViolations).toEqual([]);

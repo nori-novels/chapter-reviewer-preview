@@ -21,4 +21,4 @@ npm run test && npm run lint && npm run build && npm run scan:public && npm run 
 
 Title and chapter edits, find and replace, comparison preferences, QA navigation, glossary-term copying, and Retranslate exploration stay in the browser. Reloading the page resets chapter edits to the committed public fixture.
 
-The preview intentionally shows `This function is not available in the preview.` for Previous chapter, Next chapter, a non-current chapter-index selection, Save changes, Approve, Edit glossary, Retry translation submission, Close chapter review, the main backdrop, and Escape at the full-screen reviewer boundary. Cancel, the Retranslate close button, its backdrop, and Escape inside Retranslate only close that local modal.
+The preview intentionally shows `This function is not available in the preview.` for Previous chapter, Next chapter, a non-current chapter-index selection, Save changes, Approve with override, Edit glossary, Retry translation submission, Close chapter review, the main backdrop, and Escape at the full-screen reviewer boundary. Cancel, the Retranslate close button, its backdrop, and Escape inside Retranslate only close that local modal.

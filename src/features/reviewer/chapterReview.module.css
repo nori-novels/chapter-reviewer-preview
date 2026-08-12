@@ -1215,6 +1215,17 @@
   .footer {
     flex-wrap: wrap;
   }
+
+  .footerRight {
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .footerRight > button {
+    width: 100%;
+  }
 }
 
 .findPanel {

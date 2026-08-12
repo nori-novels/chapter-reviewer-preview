@@ -46,6 +46,9 @@ function objectKeyPattern(keys) {
   return new RegExp(`(?:["'](?:${alternatives})["']|\\b(?:${alternatives})\\b)\\s*:`, "iu");
 }
 
+const LEGACY_STORAGE_NAMESPACE = ["nori", "52" + "shuku"].join(":");
+const LEGACY_SOURCE_NAMESPACE = ["features", "importer"].join("\\/");
+
 const RULES = [
   {
     name: "uuid",
@@ -62,6 +65,17 @@ const RULES = [
   {
     name: "admin-client-import",
     pattern: /(?:from\s*|import\s*\()\s*["'][^"']*(?:admin[^"']*client|client[^"']*admin|features\/importer\/client)[^"']*["']/iu,
+  },
+  {
+    name: "legacy-importer-namespace",
+    pattern: new RegExp(
+      `(?:\\b${LEGACY_STORAGE_NAMESPACE}(?::[a-z0-9_-]+)*\\b|(?:@\\/)?${LEGACY_SOURCE_NAMESPACE}(?:\\/|\\b))`,
+      "iu",
+    ),
+  },
+  {
+    name: "internal-database-identifier",
+    pattern: /\b(?:app_private|app_public|auth|internal|private|public|storage)\.[a-z_][a-z0-9_]*\b/u,
   },
   {
     name: "original-prompt-label",

@@ -1,6 +1,7 @@
 "use client";
 
 import type { PreviewChapterSummary } from "@/features/preview/types";
+import { requiresApprovalOverride } from "./chapter-review";
 import styles from "./chapterIndexMarkers.module.css";
 
 // The marker cluster shared by the chapter reviewer's index dropdown
@@ -14,8 +15,7 @@ import styles from "./chapterIndexMarkers.module.css";
 // also be "failed". Pending and approved chapters carry no status marker.
 export function ChapterIndexMarkers({ chapter }: { chapter: PreviewChapterSummary }) {
   const failed = chapter.pipelineStatus === "failed";
-  const needsOverride = chapter.pipelineStatus === "needs_override"
-    && chapter.approvalStatus === "pending";
+  const needsOverride = requiresApprovalOverride(chapter);
 
   return (
     <span className={styles.markers}>

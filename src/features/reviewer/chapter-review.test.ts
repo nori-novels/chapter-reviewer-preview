@@ -7,11 +7,9 @@ import {
   pairEditableReviewParagraphs,
   pairReviewParagraphs,
   proportionalScrollTop,
-  readComparisonPreferences,
   replaceReviewParagraph,
   replaceReviewParagraphByIdentity,
-  safelyAcquireSessionStorage,
-  writeComparisonPreferences,
+  requiresApprovalOverride,
 } from "./chapter-review";
 
 function entry(source: string, target: string): GlossaryEntry {
@@ -166,67 +164,17 @@ describe("chapter review helpers", () => {
     );
   });
 
-  it("defaults both controls on and round-trips session preferences", () => {
-    const values = new Map<string, string>();
-    const storage = {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        values.set(key, value);
-      },
-    };
-    assert.deepEqual(readComparisonPreferences(storage), {
-      alignParagraphs: true,
-      syncScrolling: true,
-    });
-    writeComparisonPreferences(storage, {
-      alignParagraphs: false,
-      syncScrolling: true,
-    });
-    assert.deepEqual(readComparisonPreferences(storage), {
-      alignParagraphs: false,
-      syncScrolling: true,
-    });
-  });
-
-  it("falls back safely when storage methods throw", () => {
-    const broken = {
-      getItem: () => {
-        throw new Error("blocked");
-      },
-      setItem: () => {
-        throw new Error("blocked");
-      },
-    };
-    assert.deepEqual(readComparisonPreferences(broken), {
-      alignParagraphs: true,
-      syncScrolling: true,
-    });
-    assert.doesNotThrow(() =>
-      writeComparisonPreferences(broken, {
-        alignParagraphs: false,
-        syncScrolling: false,
-      }),
-    );
-  });
-
-  it("falls back safely when storage contains invalid JSON", () => {
-    assert.deepEqual(
-      readComparisonPreferences({ getItem: () => "{not-json" }),
-      { alignParagraphs: true, syncScrolling: true },
-    );
-  });
-
-  it("safely acquires session storage when the browser getter throws", () => {
-    const browser = Object.defineProperty(
-      {} as { readonly sessionStorage: Pick<Storage, "getItem" | "setItem"> },
-      "sessionStorage",
-      {
-        get() {
-          throw new Error("blocked");
-        },
-      },
-    );
-
-    assert.equal(safelyAcquireSessionStorage(browser), undefined);
-  });
+  it.each([
+    ["needs_override", "pending", true],
+    ["needs_override", "approved", false],
+    ["complete", "pending", false],
+  ])(
+    "derives override approval from %s plus %s",
+    (pipelineStatus, approvalStatus, expected) => {
+      assert.equal(
+        requiresApprovalOverride({ pipelineStatus, approvalStatus }),
+        expected,
+      );
+    },
+  );
 });

@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { beforeAll, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/Toast/Toast";
 import { PREVIEW_UNAVAILABLE_MESSAGE } from "@/features/preview/copy";
 import { previewFixture } from "@/features/preview/fixture";
@@ -14,14 +14,10 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
 
-beforeEach(() => {
-  window.sessionStorage.clear();
-});
-
-function renderReviewer() {
+function renderReviewer(fixture = previewFixture) {
   return render(
     <ToastProvider>
-      <PreviewChapterReviewer fixture={previewFixture} />
+      <PreviewChapterReviewer fixture={fixture} />
     </ToastProvider>,
   );
 }
@@ -52,9 +48,25 @@ it.each([
   "Previous chapter",
   "Next chapter",
   "Save changes",
-  "Approve",
+  "Approve with override",
   "Close chapter review",
 ])("guards %s with the exact preview toast", expectPreviewGuard);
+
+it("derives the approval action from unresolved override state", () => {
+  const overrideView = renderReviewer();
+  expect(screen.getByRole("button", { name: "Approve with override" }).className)
+    .toMatch(/danger/u);
+  overrideView.unmount();
+
+  renderReviewer({
+    ...previewFixture,
+    chapter: {
+      ...previewFixture.chapter,
+      pipelineStatus: "complete",
+    },
+  });
+  expect(screen.getByRole("button", { name: "Approve" }).className).toMatch(/primary/u);
+});
 
 it("guards non-current chapter-index selection", async () => {
   const user = userEvent.setup();
@@ -146,18 +158,30 @@ it("replaces an English-body match locally", async () => {
   expect((body as HTMLTextAreaElement).value).toContain("LOCAL_REPLACEMENT");
 });
 
-it.each(["Align paragraphs", "Sync scrolling"])(
-  "toggles %s locally",
-  async (name) => {
-    const user = userEvent.setup();
-    renderReviewer();
-    const toggle = screen.getByRole("button", { name });
+it("resets both comparison controls after the reviewer reloads", async () => {
+  const user = userEvent.setup();
+  const firstView = renderReviewer();
+  const align = screen.getByRole("button", { name: "Align paragraphs" });
+  const sync = screen.getByRole("button", { name: "Sync scrolling" });
 
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
-    await user.click(toggle);
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
-  },
-);
+  expect(align).toHaveAttribute("aria-pressed", "true");
+  expect(sync).toHaveAttribute("aria-pressed", "true");
+  await user.click(align);
+  await user.click(sync);
+  expect(align).toHaveAttribute("aria-pressed", "false");
+  expect(sync).toHaveAttribute("aria-pressed", "false");
+
+  firstView.unmount();
+  renderReviewer();
+  await act(async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  });
+
+  expect(screen.getByRole("button", { name: "Align paragraphs" }))
+    .toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "Sync scrolling" }))
+    .toHaveAttribute("aria-pressed", "true");
+});
 
 it("expands the QA rail and selects a warning", async () => {
   const user = userEvent.setup();

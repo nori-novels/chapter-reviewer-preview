@@ -6,9 +6,8 @@ function invalidTlNote(): never {
   throw new Error("The TL-note response is invalid.");
 }
 
-// TL-note prose and items use the exact ECMAScript trim() visibility contract:
-// WhiteSpace plus LineTerminator code points. PostgreSQL lists the same set in
-// private.novel_import_has_ecmascript_trimmed_content.
+// TL-note prose and items use the ECMAScript trim() visibility contract:
+// WhiteSpace plus LineTerminator code points.
 function hasEcmascriptTrimmedContent(value: string): boolean {
   return value.trim().length > 0;
 }

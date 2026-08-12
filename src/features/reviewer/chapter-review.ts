@@ -45,22 +45,14 @@ export interface ComparisonPreferences {
   syncScrolling: boolean;
 }
 
-type ReviewStorage = Pick<Storage, "getItem" | "setItem">;
-type SessionStorageOwner = { readonly sessionStorage: ReviewStorage };
-const PREFERENCE_KEY = "nori:52shuku:chapter-review-comparison";
-const DEFAULT_PREFERENCES: ComparisonPreferences = {
-  alignParagraphs: true,
-  syncScrolling: true,
-};
+interface ApprovalState {
+  pipelineStatus: string;
+  approvalStatus: string;
+}
 
-export function safelyAcquireSessionStorage(
-  browser: SessionStorageOwner,
-): ReviewStorage | undefined {
-  try {
-    return browser.sessionStorage;
-  } catch {
-    return undefined;
-  }
+export function requiresApprovalOverride(state: ApprovalState): boolean {
+  return state.pipelineStatus === "needs_override"
+    && state.approvalStatus === "pending";
 }
 
 export function highlightSourceText(
@@ -261,37 +253,4 @@ export function proportionalScrollTop(
     targetRange,
     Math.max(0, ((source.scrollTop ?? 0) / sourceRange) * targetRange),
   );
-}
-
-export function readComparisonPreferences(
-  storage: Pick<ReviewStorage, "getItem"> | undefined,
-): ComparisonPreferences {
-  try {
-    const parsed = JSON.parse(
-      storage?.getItem(PREFERENCE_KEY) ?? "null",
-    ) as Partial<ComparisonPreferences> | null;
-    return {
-      alignParagraphs:
-        typeof parsed?.alignParagraphs === "boolean"
-          ? parsed.alignParagraphs
-          : DEFAULT_PREFERENCES.alignParagraphs,
-      syncScrolling:
-        typeof parsed?.syncScrolling === "boolean"
-          ? parsed.syncScrolling
-          : DEFAULT_PREFERENCES.syncScrolling,
-    };
-  } catch {
-    return { ...DEFAULT_PREFERENCES };
-  }
-}
-
-export function writeComparisonPreferences(
-  storage: Pick<ReviewStorage, "setItem"> | undefined,
-  preferences: ComparisonPreferences,
-): void {
-  try {
-    storage?.setItem(PREFERENCE_KEY, JSON.stringify(preferences));
-  } catch {
-    // Preferences are optional; in-memory state remains authoritative.
-  }
 }

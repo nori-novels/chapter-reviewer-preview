@@ -23,9 +23,7 @@ import { FindReplacePanel, type FindReplaceState } from "./FindReplacePanel";
 import { PreviewRetryModal } from "./PreviewRetryModal";
 import {
   type ComparisonPreferences,
-  readComparisonPreferences,
-  safelyAcquireSessionStorage,
-  writeComparisonPreferences,
+  requiresApprovalOverride,
 } from "./chapter-review";
 import type { FindCurrentMatch } from "./find-replace";
 import {
@@ -141,13 +139,6 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   }, [focusInsideDialog]);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setPreferences(readComparisonPreferences(safelyAcquireSessionStorage(window)));
-    });
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
@@ -195,12 +186,10 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
   }, [closeFindPanel, closeIndexMenu, indexOpen, retryOpen, showPreviewUnavailable]);
 
   function togglePreference(key: keyof ComparisonPreferences) {
-    setPreferences((current) => {
-      const next = { ...current, [key]: !current[key] };
-      writeComparisonPreferences(safelyAcquireSessionStorage(window), next);
-      return next;
-    });
+    setPreferences((current) => ({ ...current, [key]: !current[key] }));
   }
+
+  const approvalRequiresOverride = requiresApprovalOverride(fixture.chapter);
 
   const warnings = useMemo(() => collectQaWarnings({
     sourceTitle: fixture.chapter.sourceTitle,
@@ -413,8 +402,12 @@ export function PreviewChapterReviewer({ fixture }: { fixture: PreviewFixture })
             <Button type="button" variant="soft" onClick={showPreviewUnavailable}>
               Save changes
             </Button>
-            <Button type="button" onClick={showPreviewUnavailable}>
-              Approve
+            <Button
+              type="button"
+              variant={approvalRequiresOverride ? "danger" : "primary"}
+              onClick={showPreviewUnavailable}
+            >
+              {approvalRequiresOverride ? "Approve with override" : "Approve"}
             </Button>
           </div>
         </footer>
